@@ -10,6 +10,7 @@ import {
 } from '@xyflow/react';
  
 import '@xyflow/react/dist/style.css';
+import Login from './components/Login';
  
 const initialNodes = [
   { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
@@ -28,6 +29,7 @@ export default function App() {
  
   return (
     <div className='w-screen h-screen'>
+      {/* <Login /> */}
       <ReactFlow
         nodes={nodes}
         edges={edges}
