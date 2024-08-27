@@ -10,14 +10,13 @@ import { useDnD } from './DnDContext';
 import LocalExtractNode from "./LocalExtractNode";
 import { useCallback, useState } from 'react';
 
-
 // const nodeTypes = { localExtractor: LocalExtractNode };
 
 export default function Component() {
   const generalItems = [
-    { name: "Local", icon: <img src={file} alt="file" className="h-4 w-4"/>, type:"textUpdater" },
-    { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4"/>, type: "localExtractor"},
-    { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "localExtractor"},
+    { name: "Local", icon: <img src={file} alt="file" className="h-4 w-4"/>, type:"LocalExtractor" },
+    { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4"/>, type: "AWSExtractor"},
+    { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLExtractor"},
   ];
 
   const [_, setType] = useDnD();

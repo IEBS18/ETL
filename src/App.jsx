@@ -17,7 +17,9 @@ import Sidebar from './Sidebar';
 import './index.css';
 import Component from './components/Ui';
 
-import TextUpdaterNode from './components/LocalExtractNode';
+import LocalExtractNode from './components/LocalExtractNode';
+import AWSExtractNode from './components/AWSExtractNode';
+import SQLExtractNode from './components/SQLExtractNode';
 
 const initialNodes = [
   {
@@ -28,7 +30,7 @@ const initialNodes = [
   },
 ];
 
-const nodeTypes = { textUpdater: TextUpdaterNode };
+const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode };
 
 let id = 0;
 const getId = () => `dndnode_${id++}`;
