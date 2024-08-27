@@ -24,4 +24,5 @@ Werkzeug
 wheel              
 zipp    
 openpyxl
-flask-cors           
+flask-cors 
+mysql-connector-python          

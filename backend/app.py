@@ -3,6 +3,8 @@ import pandas as pd
 import boto3
 import pyodbc
 from flask_cors import CORS
+import mysql.connector
+from mysql.connector import Error
 
 app = Flask(__name__)
 CORS(app)
@@ -51,32 +53,39 @@ def aws_extract():
 
 @app.route('/sqlextract', methods=['POST'])
 def sql_extract():
-    # Get SQL Server credentials and connection details from the request
-    server = request.form['server']
+    # Get MySQL credentials and connection details from the request
+    host = request.form['host']
     database = request.form['database']
     username = request.form['username']
     password = request.form['password']
 
-    # Connection string for SQL Server
-    connection_string = f'DRIVER={{SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
-
     try:
-        # Connect to SQL Server
-        connection = pyodbc.connect(connection_string)
-        cursor = connection.cursor()
+        # Connect to MySQL Server
+        connection = mysql.connector.connect(
+            host=host,
+            database=database,
+            user=username,
+            password=password
+        )
 
-        # Example query to fetch table names
-        cursor.execute("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'")
-        tables = [row[0] for row in cursor.fetchall()]
+        if connection.is_connected():
+            cursor = connection.cursor()
+            # Query to fetch table names
+            cursor.execute("SHOW TABLES")
+            tables = [row[0] for row in cursor.fetchall()]
 
-        return jsonify({
-            'tables': tables
-        })
+            return jsonify({
+                'tables': tables
+            })
 
-    except Exception as e:
+    except Error as e:
         return jsonify({
             'error': str(e)
         })
 
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 if __name__ == '__main__':
     app.run(debug=True)

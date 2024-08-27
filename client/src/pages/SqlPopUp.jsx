@@ -4,22 +4,19 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Label } from "@/components/ui/label"
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import mysql from "../assets/export/mysql.png";
 
-export default function AwsPopUp() {
+export default function SqlPopUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     database: "",
     username: "",
     password: "",
     host: "",
-    port: 23666,
+    port: 3306,
   });
 
   const handleInputChange = (e) => {
@@ -27,22 +24,31 @@ export default function AwsPopUp() {
     setFormData((prevState) => ({ ...prevState, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log("Form submitted:", formData);
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/sqlextract", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(formData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Response data:", data);
+      } else {
+        console.error("Error:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    }
   };
 
   return (
     <Card className="w-full max-w-lg mx-auto">
-      {" "}
-      {/* Increased max-width to 'lg' */}
-      {/* <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <img src={mysql} alt="mysql" className="h-8 w-8" />
-          <span>Connect MySql Server</span>
-        </CardTitle>
-      </CardHeader> */}
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -52,7 +58,7 @@ export default function AwsPopUp() {
               name="database"
               value={formData.database}
               onChange={handleInputChange}
-              placeholder="Enter your Sql Database"
+              placeholder="Enter your database name"
               required
             />
           </div>
@@ -78,7 +84,7 @@ export default function AwsPopUp() {
               type={showPassword ? "text" : "password"}
               value={formData.password}
               onChange={handleInputChange}
-              placeholder="Enter your S3 Bucket Name"
+              placeholder="Enter your password"
               required
             />
             <button
@@ -111,7 +117,7 @@ export default function AwsPopUp() {
               name="port"
               value={formData.port}
               onChange={handleInputChange}
-              placeholder="Enter your Endpoint URL"
+              placeholder="Port"
               required
             />
           </div>
