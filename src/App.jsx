@@ -1,46 +1,110 @@
-import React, { useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   ReactFlow,
-  MiniMap,
-  Controls,
-  Background,
+  ReactFlowProvider,
+  addEdge,
   useNodesState,
   useEdgesState,
-  addEdge,
+  Controls,
+  useReactFlow,
+  MiniMap,
+  Background,
 } from '@xyflow/react';
- 
 import '@xyflow/react/dist/style.css';
-import Login from './components/Login';
- 
+import { DnDProvider, useDnD } from './components/DnDContext';
+import Sidebar from './Sidebar';
+
+import './index.css';
+import Component from './components/Ui';
+
+import TextUpdaterNode from './components/LocalExtractNode';
+
 const initialNodes = [
-  { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
-  { id: '2', position: { x: 0, y: 100 }, data: { label: '2' } },
+  {
+    id: '1',
+    type: '',
+    data: { label: 'input node' },
+    position: { x: 250, y: 5 },
+  },
 ];
-const initialEdges = [{ id: 'e1-2', source: '1', target: '2' }];
- 
-export default function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
- 
+
+const nodeTypes = { textUpdater: TextUpdaterNode };
+
+let id = 0;
+const getId = () => `dndnode_${id++}`;
+
+const DnDFlow = () => {
+  const reactFlowWrapper = useRef(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const { screenToFlowPosition } = useReactFlow();
+  const [type] = useDnD();
+
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges],
+    [],
   );
- 
+
+  const onDragOver = useCallback((event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+      if (!type) {
+        return;
+      }
+
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      const newNode = {
+        id: getId(),
+        type,
+        position,
+        data: { label: `${type} node` },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [screenToFlowPosition, type],
+  );
+
   return (
-    <div className='w-screen h-screen'>
-      {/* <Login /> */}
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-      >
-        <Controls />
-        <MiniMap />
-        <Background variant="dots" gap={12} size={1} />
-      </ReactFlow>
+    <div className="flex flex-col">
+      {/* <Sidebar /> */}
+      <Component />
+      <div className="reactflow-wrapper" style={{ width: '100vw', height: '50vh' }} ref={reactFlowWrapper}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          fitView
+          nodeTypes={nodeTypes}
+        >
+          <Controls />
+          <MiniMap />
+          <Background variant="dots" gap={12} size={1} />
+        </ReactFlow>
+      </div>
+      {/* <Sidebar /> */}
     </div>
   );
-}
+};
+
+export default () => (
+  <div >
+    <ReactFlowProvider>
+      <DnDProvider>
+        <DnDFlow />
+      </DnDProvider>
+    </ReactFlowProvider>
+  </div>
+);

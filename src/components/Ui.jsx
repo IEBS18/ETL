@@ -6,20 +6,31 @@ import { ChevronLeft, Share, Play, Settings, ChevronDown, Upload } from "lucide-
 import awsS3 from "../assets/export/awsS3.png";
 import mysql from "../assets/export/mysql.png";
 import file from "../assets/export/file.png";
+import { useDnD } from './DnDContext';
+import LocalExtractNode from "./LocalExtractNode";
+import { useCallback, useState } from 'react';
+
+
+// const nodeTypes = { localExtractor: LocalExtractNode };
 
 export default function Component() {
   const generalItems = [
-    { name: "Local", icon: <img src={file} alt="file" className="h-4 w-4"/> },
-    { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4"/>},
-    { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>},
-    // { name: "Pipeline", icon: "▶" },
-    // { name: "Transform", icon: "⇌" },
-    // { name: "File Save", icon: "💾" },
-    // { name: "Note", icon: "📝" }, 
+    { name: "Local", icon: <img src={file} alt="file" className="h-4 w-4"/>, type:"textUpdater" },
+    { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4"/>, type: "localExtractor"},
+    { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "localExtractor"},
   ];
 
+  const [_, setType] = useDnD();
+
+  const onDragStart = (event, nodeType) => {
+    setType(nodeType);
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+
+
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col bg-background">
       <header className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="icon">
@@ -52,7 +63,7 @@ export default function Component() {
           </Button>
         </div>
       </header>
-      <Tabs defaultValue="extract" className="flex-grow">
+      <Tabs defaultValue="extract" className="">
         <TabsList className="bg-background border-b px-4">
           <TabsTrigger value="extract">Extract</TabsTrigger>
           <TabsTrigger value="transform">Transform</TabsTrigger>
@@ -67,25 +78,15 @@ export default function Component() {
           <div className="flex space-x-2">
             {generalItems.map((item) => (
               <DropdownMenu key={item.name}>
-                {/* <DropdownMenuTrigger asChild> */}
-                  <Button variant="outline" className="h-10 px-3 py-2">
+                  <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
                     <span className="mr-2">{item.icon}</span>
                     {item.name}
                     {/* <ChevronDown className="ml-2 h-4 w-4" /> */}
                   </Button>
-                {/* </DropdownMenuTrigger> */}
-
-                {/* <DropdownMenuContent> */}
-
-                  {/* <DropdownMenuItem>Option 1</DropdownMenuItem>
-                  <DropdownMenuItem>Option 2</DropdownMenuItem>
-                  <DropdownMenuItem>Option 3</DropdownMenuItem> */}
-                {/* </DropdownMenuContent> */}
               </DropdownMenu>
             ))}
           </div>
         </TabsContent>
-        {/* Add other TabsContent for other tabs if needed */}
       </Tabs>
     </div>
   );

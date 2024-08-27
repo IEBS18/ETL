@@ -1,20 +1,85 @@
-import React, { useState } from 'react'
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 
-const Login = () => {
-    const [email,setEmail] = useState('')
-    const [password,setPassword] = useState('')
+export default function Login() {
   return (
-    <div className='flex flex-col gap-4 w-2/5 m-auto mt-40'>
-        <div>Login</div>
-        <form className='flex flex-col gap-8'>
-            <label htmlFor="email"></label>
-            <input id='email' type='text' value={email} onChange={(e) => setEmail(e.target.value)} placeholder='John@example.com' />
-            <label htmlFor="password"></label>
-            <input id='password' type='password' value={password} onChange={(e) => setPassword(e.target.value)} placeholder='Password' />
-            <button type='submit'>Login</button>
-        </form>
+    <div className="flex justify-center items-center">
+
+    <Tabs defaultValue="login" className="w-[400px]">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="login">Login</TabsTrigger>
+        <TabsTrigger value="signup">SignUp</TabsTrigger>
+      </TabsList>
+      <TabsContent value="login">
+        <Card>
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>
+              Login with your credentials.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="space-y-1">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" defaultValue="abc@xyz.com" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type='password' defaultValue="password" />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button>Login</Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+      <TabsContent value="signup">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sign Up</CardTitle>
+            <CardDescription>
+              Don't have an account ? Create one here!
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="space-y-1">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" defaultValue="name" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" defaultValue="abc@xyz.com" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type='password' defaultValue="password" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="password">Confirm Password</Label>
+              <Input id="cnfpassword" type='password' />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button>Create Account</Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+    </Tabs>
     </div>
   )
 }
-
-export default Login
