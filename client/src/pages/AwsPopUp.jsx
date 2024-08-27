@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
-import awsS3 from "../assets/export/awsS3.png";
 
 export default function AwsPopUp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -21,20 +20,27 @@ export default function AwsPopUp() {
     setFormData(prevState => ({ ...prevState, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log('Form submitted:', formData);
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/awsextract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(formData),
+      });
+
+      const data = await response.json();
+      console.log('Buckets:', data.buckets); // Handle the response data (e.g., display bucket names)
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto"> {/* Increased max-width to 'lg' */}
-      {/* <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-            <img src={awsS3} alt="awsS3" className="h-8 w-8" />
-          <span>Connect AWS S3</span>
-        </CardTitle>
-      </CardHeader> */}
+    <Card className="w-full max-w-lg mx-auto">
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

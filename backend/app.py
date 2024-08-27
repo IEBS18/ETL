@@ -2,8 +2,10 @@ from flask import Flask, request, jsonify
 import pandas as pd
 import boto3
 import pyodbc
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/localextract', methods=['POST'])
 def local_extract():
@@ -27,9 +29,9 @@ def local_extract():
 @app.route('/awsextract', methods=['POST'])
 def aws_extract():
 
-    region_name = request.form['region_name']
-    access_key_id = request.form['access_key_id']
-    secret_access_key = request.form['secret_access_key']
+    region_name = request.form['region']
+    access_key_id = request.form['accessKeyId']
+    secret_access_key = request.form['secretAccessKey']
 
     #AWS S3 connection
     s3_client = boto3.client(

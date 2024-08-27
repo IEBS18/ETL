@@ -44,13 +44,6 @@ function SQLExtractNode({ data, isConnectable }) {
           </DialogContent>
         </Dialog>
       </div>
-      {/* <Handle
-        type="source"
-        position={Position.Bottom}
-        id="a"
-        style={handleStyle}
-        isConnectable={isConnectable}
-      /> */}
       <Handle
         type="source"
         position={Position.Bottom}

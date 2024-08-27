@@ -22,4 +22,6 @@ tzdata
 urllib3            
 Werkzeug           
 wheel              
-zipp               
+zipp    
+openpyxl
+flask-cors           
