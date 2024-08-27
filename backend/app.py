@@ -34,6 +34,7 @@ def aws_extract():
     region_name = request.form['region']
     access_key_id = request.form['accessKeyId']
     secret_access_key = request.form['secretAccessKey']
+    bucket_name = request.form['bucketName']
 
     #AWS S3 connection
     s3_client = boto3.client(
@@ -44,11 +45,16 @@ def aws_extract():
     )
 
     #bucketsnamereturnkrega
-    buckets = s3_client.list_buckets()
-    bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
+    # buckets = s3_client.list_buckets()
+    # bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
+    objects = s3_client.list_objects_v2(Bucket=bucket_name)
+    print(objects)
+    object_names = [obj['Key'] for obj in objects.get('Contents', [])]
+    print(object_names)
 
     return jsonify({
-        'buckets': bucket_names
+        'bucket': bucket_name,
+        'objects': object_names
     })
 
 @app.route('/sqlextract', methods=['POST'])

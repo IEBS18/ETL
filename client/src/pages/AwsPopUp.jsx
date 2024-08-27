@@ -33,7 +33,7 @@ export default function AwsPopUp() {
       });
 
       const data = await response.json();
-      console.log('Buckets:', data.buckets); // Handle the response data (e.g., display bucket names)
+      console.log('Buckets:', data); // Handle the response data (e.g., display bucket names)
     } catch (error) {
       console.error('Error:', error);
     }
