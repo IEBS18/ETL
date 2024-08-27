@@ -6,6 +6,8 @@ import './index.css'
 import Login from './components/Login.jsx'
 import SignUp from './components/SignUp.jsx'
 import Ui from './components/Ui.jsx'
+import AwsPopUp from './pages/AwsPopUp.jsx'
+import SqlPopUp from './pages/SqlPopUp.jsx'
 
 const router = createBrowserRouter([
   {
@@ -23,6 +25,14 @@ const router = createBrowserRouter([
   {
     path: '/ui',
     element: <Ui/>
+  },
+  {
+    path: '/aws',
+    element: <AwsPopUp/>
+  },
+  {
+    path: '/sql',
+    element: <SqlPopUp/>
   },
 ])
 
