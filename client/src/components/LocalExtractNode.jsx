@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 
 const handleStyle = { left: 10 };
 
@@ -8,8 +8,13 @@ function LocalExtractNode({ id, data, isConnectable }) {
   const [sheetName, setSheetName] = useState(null);
   const [sheet, setSheet] = useState('');
 
+  const { updateNodeData } = useReactFlow();
+
+  const { setNodes } = useReactFlow();
+
   const onChange = useCallback((evt) => {
     setSelectedFile(evt.target.files[0]);
+    
   }, []);
 
   const onChangeSheet = useCallback((evt) => {
@@ -18,7 +23,7 @@ function LocalExtractNode({ id, data, isConnectable }) {
   }, []);
 
   const handleDelete = () => {
-    data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
+    setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
   };
 
   const handleSheets = async () => {
@@ -56,6 +61,11 @@ function LocalExtractNode({ id, data, isConnectable }) {
         });
         const data = await response.json();
         console.log(data); // Handle the response data (e.g., display sheet names and columns)
+        setNodes((nds) => 
+          nds.map((node) => 
+            node.id === id ? { ...node, data: { ...node.data, filePath: data.s3_path } } : node
+          )
+        );
         // setSheetName(data.sheet_names);
       } catch (error) {
         console.error('Error:', error);

@@ -60,6 +60,7 @@ def local_to_s3():
     # Upload the file to S3
     s3_key = f"{sheet_name}.xlsx"  # You can customize the S3 key (file name in S3)
     s3.upload_fileobj(output, bucket_name, 'DataAnalysis/Input/{}'.format(s3_key))
+    print("upload started")
 
     # Generate the S3 file URL
     s3_url = f"s3://{bucket_name}.s3.amazonaws.com/DataAnalysis/Input/{s3_key}"

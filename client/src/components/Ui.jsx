@@ -18,6 +18,9 @@ export default function Component() {
     { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4"/>, type: "AWSExtractor"},
     { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLExtractor"},
   ];
+  const TransformItems = [
+    { name: "SQL Query", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLQuery"},
+  ];
 
   const [_, setType] = useDnD();
 
@@ -73,6 +76,19 @@ export default function Component() {
           <TabsTrigger value="logic">Logic</TabsTrigger>
           <TabsTrigger value="chat">Chat</TabsTrigger> */}
         </TabsList>
+        <TabsContent value="transform" className="p-4 bg-gray-50">
+          <div className="flex space-x-2">
+            {TransformItems.map((item) => (
+              <DropdownMenu key={item.name}>
+                  <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
+                    <span className="mr-2">{item.icon}</span>
+                    {item.name}
+                    {/* <ChevronDown className="ml-2 h-4 w-4" /> */}
+                  </Button>
+              </DropdownMenu>
+            ))}
+          </div>
+        </TabsContent>
         <TabsContent value="extract" className="p-4 bg-gray-50">
           <div className="flex space-x-2">
             {generalItems.map((item) => (
