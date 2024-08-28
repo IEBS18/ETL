@@ -3,12 +3,16 @@ import { Handle, Position } from '@xyflow/react';
 
 const handleStyle = { left: 10 };
 
-function LocalExtractNode({ data, isConnectable }) {
+function LocalExtractNode({id, data, isConnectable }) {
   const [selectedFile, setSelectedFile] = useState(null);
 
   const onChange = useCallback((evt) => {
     setSelectedFile(evt.target.files[0]);
   }, []);
+
+  const handleDelete = () => {
+    data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
+  };
 
   const handleExtract = async () => {
     if (selectedFile) {
@@ -32,7 +36,13 @@ function LocalExtractNode({ data, isConnectable }) {
   };
 
   return (
-    <div className="text-updater-node">
+    <div className="text-updater-node relative">
+      <button
+        onClick={handleDelete}
+        className="absolute top-0 right-0 p-1 text-red-500"
+      >
+        &times;
+      </button>
       <div className='text-sm border-2 border-black flex flex-col p-2'>
         <label htmlFor="file">Upload File</label>
         <input

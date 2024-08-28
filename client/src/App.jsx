@@ -21,14 +21,6 @@ import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from './components/AWSExtractNode';
 import SQLExtractNode from './components/SQLExtractNode';
 
-const initialNodes = [
-  {
-    id: '1',
-    type: '',
-    data: { label: 'input node' },
-    position: { x: 250, y: 5 },
-  },
-];
 
 const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode };
 
@@ -67,12 +59,12 @@ const DnDFlow = () => {
         id: getId(),
         type,
         position,
-        data: { label: `${type} node` },
+        data: { label: `${type} node`, setNodes, nodes },
       };
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, type],
+    [screenToFlowPosition, type, nodes, setNodes],
   );
 
   return (
@@ -100,6 +92,7 @@ const DnDFlow = () => {
     </div>
   );
 };
+
 
 export default () => (
   <div >

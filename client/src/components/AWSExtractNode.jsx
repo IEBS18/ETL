@@ -1,17 +1,12 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useCallback, useEffect, useState } from "react";
-import { Handle, Position } from "@xyflow/react";
+import React, { useState, useCallback } from 'react';
+import { Handle, Position } from '@xyflow/react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import AwsPopUp from "../pages/AwsPopUp";
 import awsS3 from "../assets/export/awsS3.png";
+
 const handleStyle = { left: 10 };
 
-function AWSExtractNode({ data, isConnectable }) {
+function AWSExtractNode({ id, data, isConnectable }) {
   const [AwsData, setAwsData] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -31,24 +26,19 @@ function AWSExtractNode({ data, isConnectable }) {
     setIsDialogOpen(false);
   };
 
-  // const filteredFiles = data?.objects.filter(
-  //   (file) => file.endsWith(".csv") || file.endsWith(".xlsx")
-  // );
-  // const handleButtonClick =() => {
-  //   setShowPopup(true);
-  // }
-
-  // const handleClosePopup = () => {
-  //   setShowPopup(false);
-  // }
+  const handleDelete = () => {
+    data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
+  };
 
   return (
-    <div className="text-updater-node">
-      {/* <Handle
-        type="target"
-        position={Position.Top}
-        isConnectable={isConnectable}
-      /> */}
+    <div className="text-updater-node relative">
+      {/* Cross Button */}
+      <button
+        onClick={handleDelete}
+        className="absolute top-0 right-0 p-1 text-red-500"
+      >
+        &times;
+      </button>
       <div className="text-sm border-2 border-black w-full flex flex-col p-2">
         <p>AWS</p>
 
@@ -74,14 +64,6 @@ function AWSExtractNode({ data, isConnectable }) {
         ) : (
           <p>Loading files...</p> // You can show a loading message or spinner here
         )}
-        {/* <label htmlFor="text">AWS Bucket Key:</label> */}
-        {/* <input
-          id="text"
-          name="text"
-          type="text"
-          onChange={onChange}
-          className="nodrag"
-        /> */}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -91,16 +73,6 @@ function AWSExtractNode({ data, isConnectable }) {
             >
               {AwsData ? "Load Data" : "Connect Account"}
             </button>
-            {/* <button
-              className={`p-2 w-auto self-center mt-4 ${
-                AwsData === null
-                  ? "bg-gray-500 cursor-not-allowed"
-                  : "bg-black text-white"
-              }`}
-              disabled={AwsData === null}
-            >
-              Connect Account
-            </button> */}
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -113,13 +85,6 @@ function AWSExtractNode({ data, isConnectable }) {
           </DialogContent>
         </Dialog>
       </div>
-      {/* <Handle
-        type="source"
-        position={Position.Bottom}
-        id="a"
-        style={handleStyle}
-        isConnectable={isConnectable}
-      /> */}
       <Handle
         type="source"
         position={Position.Bottom}

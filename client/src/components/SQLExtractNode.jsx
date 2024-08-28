@@ -12,18 +12,23 @@ import mysql from '../assets/export/mysql.png';
 
 const handleStyle = { left: 10 };
 
-function SQLExtractNode({ data, isConnectable }) {
+function SQLExtractNode({ id, data, isConnectable }) {
   const onChange = useCallback((evt) => {
     console.log(evt.target.value);
   }, []);
 
+  const handleDelete = () => {
+    data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
+  };
+
   return (
-    <div className="text-updater-node">
-      {/* <Handle
-        type="target"
-        position={Position.Top}
-        isConnectable={isConnectable}
-      /> */}
+    <div className="text-updater-node relative">
+      <button
+        onClick={handleDelete}
+        className="absolute top-0 right-0 p-1 text-red-500"
+      >
+        &times;
+      </button>
       <div className='text-sm border-2 border-black w-full flex flex-col p-2'>
         <label htmlFor="text">SQL Server</label>
         <input id="text" name="text" type='text' onChange={onChange} className="nodrag" />
