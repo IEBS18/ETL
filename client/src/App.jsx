@@ -79,7 +79,7 @@ const DnDFlow = () => {
     <div className="flex flex-col">
       {/* <Sidebar /> */}
       <Component />
-      <div className="reactflow-wrapper" style={{ width: '100vw', height: '50vh' }} ref={reactFlowWrapper}>
+      <div className="reactflow-wrapper" style={{ width: '100vw', height: '71vh' }} ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

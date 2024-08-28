@@ -45,8 +45,8 @@ def aws_extract():
     )
 
     #bucketsnamereturnkrega
-    # buckets = s3_client.list_buckets()
-    # bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
+    buckets = s3_client.list_buckets()
+    bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
     objects = s3_client.list_objects_v2(Bucket=bucket_name)
     print(objects)
     object_names = [obj['Key'] for obj in objects.get('Contents', [])]

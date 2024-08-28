@@ -5,14 +5,14 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
-export default function AwsPopUp() {
+export default function AwsPopUp({onSave, closePopUp}) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     accessKeyId: '',
     secretAccessKey: '',
     bucketName: '',
     region: '',
-    endpointUrl: ''
+    // endpointUrl: ''
   });
 
   const handleInputChange = (e) => {
@@ -33,7 +33,9 @@ export default function AwsPopUp() {
       });
 
       const data = await response.json();
-      console.log('Buckets:', data); // Handle the response data (e.g., display bucket names)
+      onSave(data);
+      closePopUp();
+      console.log('Data:', data); // Handle the response data (e.g., display bucket names)
     } catch (error) {
       console.error('Error:', error);
     }
@@ -101,7 +103,7 @@ export default function AwsPopUp() {
               required
             />
           </div>
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="endpointUrl">Endpoint URL</Label>
             <Input
               id="endpointUrl"
@@ -111,7 +113,7 @@ export default function AwsPopUp() {
               placeholder="Enter your Endpoint URL"
               required
             />
-          </div>
+          </div> */}
         </form>
       </CardContent>
       <CardFooter>
