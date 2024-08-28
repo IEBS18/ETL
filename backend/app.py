@@ -27,6 +27,20 @@ def local_extract():
         'sheet_names': sheet_names,
         # 'columns': column_names
     })
+@app.route('/localextractsheet', methods=['POST'])
+def local_to_s3():
+
+    file = request.files['file']
+    sheet_name = request.form['sheetName']
+
+    workbook = pd.ExcelFile(file)
+
+    df = pd.read_excel(workbook, sheet_name=sheet_name)
+    column_names = df.columns.tolist()
+
+    return jsonify({
+        'columns': column_names
+    })
 
 @app.route('/awsextract', methods=['POST'])
 def aws_extract():
