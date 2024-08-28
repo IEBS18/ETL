@@ -1,12 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { Handle, Position } from '@xyflow/react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useCallback, useEffect, useState } from "react";
+import { Handle, Position } from "@xyflow/react";
 import AwsPopUp from "../pages/AwsPopUp";
 import awsS3 from "../assets/export/awsS3.png";
-
 const handleStyle = { left: 10 };
 
-function AWSExtractNode({ id, data, isConnectable }) {
+function AWSExtractNode({ data, isConnectable }) {
   const [AwsData, setAwsData] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -30,15 +35,83 @@ function AWSExtractNode({ id, data, isConnectable }) {
     data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
   };
 
+   // Filter and build tree structure
+   const buildFilteredTree = (paths) => {
+    const tree = {};
+
+    // Filter paths for .csv or .xlsx files
+    const filteredPaths = paths.filter(
+      (path) => path.endsWith(".csv") || path.endsWith(".xlsx")
+    );
+
+    // Build tree
+    filteredPaths.forEach((path) => {
+      const parts = path.split("/");
+      let current = tree;
+
+      parts.forEach((part, index) => {
+        if (index === parts.length - 1) {
+          // It's a file
+          current[part] = null;
+        } else {
+          // It's a folder
+          if (!current[part]) {
+            current[part] = {};
+          }
+          current = current[part];
+        }
+      });
+    });
+
+    // Prune empty folders
+    const pruneEmptyFolders = (node) => {
+      for (const key in node) {
+        if (node[key] === null) continue; // It's a file, keep it
+        pruneEmptyFolders(node[key]);
+        if (Object.keys(node[key]).length === 0) {
+          delete node[key];
+        }
+      }
+    };
+
+    pruneEmptyFolders(tree);
+    return tree;
+  };
+
+  const renderOptions = (tree, prefix = "") => {
+    return Object.entries(tree).map(([key, value]) => {
+      const currentPath = `${prefix}${key}`;
+      if (value === null) {
+        return (
+          <option key={currentPath} value={currentPath}>
+            {currentPath}
+          </option>
+        );
+      } else {
+        return [
+          <option key={currentPath} disabled>
+            {currentPath}/
+          </option>,
+          ...renderOptions(value, `${currentPath}/`)
+        ];
+      }
+    });
+  };
+
   return (
     <div className="text-updater-node relative">
-      {/* Cross Button */}
       <button
         onClick={handleDelete}
         className="absolute top-0 right-0 p-1 text-red-500"
       >
         &times;
       </button>
+    <div className="text-updater-node">
+      {/* <Handle
+        type="target"
+        position={Position.Top}
+        isConnectable={isConnectable}
+      /> */}
       <div className="text-sm border-2 border-black w-full flex flex-col p-2">
         <p>AWS</p>
 
@@ -52,18 +125,20 @@ function AWSExtractNode({ id, data, isConnectable }) {
               className="nodrag"
             >
               <option value="">Select a file</option>
-              {AwsData?.objects?.filter(
-                  (file) => file.endsWith(".csv") || file.endsWith(".xlsx")
-                ).map((file, index) => (
-                  <option key={index} value={file}>
-                    {file}
-                  </option>
-                ))}
+              {renderOptions(buildFilteredTree(AwsData.objects))}
             </select>
           </div>
         ) : (
-          <p>Loading files...</p> // You can show a loading message or spinner here
+          <p>Loading files...</p>
         )}
+        {/* <label htmlFor="text">AWS Bucket Key:</label> */}
+        {/* <input
+          id="text"
+          name="text"
+          type="text"
+          onChange={onChange}
+          className="nodrag"
+        /> */}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -73,6 +148,16 @@ function AWSExtractNode({ id, data, isConnectable }) {
             >
               {AwsData ? "Load Data" : "Connect Account"}
             </button>
+            {/* <button
+              className={`p-2 w-auto self-center mt-4 ${
+                AwsData === null
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-black text-white"
+              }`}
+              disabled={AwsData === null}
+            >
+              Connect Account
+            </button> */}
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -85,12 +170,20 @@ function AWSExtractNode({ id, data, isConnectable }) {
           </DialogContent>
         </Dialog>
       </div>
+      {/* <Handle
+        type="source"
+        position={Position.Bottom}
+        id="a"
+        style={handleStyle}
+        isConnectable={isConnectable}
+      /> */}
       <Handle
         type="source"
         position={Position.Bottom}
         id="b"
         isConnectable={isConnectable}
       />
+    </div>
     </div>
   );
 }
