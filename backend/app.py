@@ -5,7 +5,12 @@ import pyodbc
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
+from dotenv import load_dotenv
+import os
+from io import BytesIO
+import xlsxwriter
 
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
@@ -29,17 +34,39 @@ def local_extract():
     })
 @app.route('/localextractsheet', methods=['POST'])
 def local_to_s3():
-
+    # Get file and sheet name from request
     file = request.files['file']
     sheet_name = request.form['sheetName']
+    bucket_name =os.environ['bucket_name']  # Get the S3 bucket name from the request
 
+    # Read the sheet into a DataFrame
     workbook = pd.ExcelFile(file)
-
     df = pd.read_excel(workbook, sheet_name=sheet_name)
-    column_names = df.columns.tolist()
+    
+    # Convert the DataFrame back to an Excel file in memory
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+    output.seek(0)
 
+    # Initialize the S3 client
+    s3 = boto3.client(
+        's3',
+        region_name=os.environ["region_name"],
+        aws_access_key_id=os.environ["aws_access_key_id"],
+        aws_secret_access_key=os.environ["aws_secret_access_key"]
+                      )
+
+    # Upload the file to S3
+    s3_key = f"{sheet_name}.xlsx"  # You can customize the S3 key (file name in S3)
+    s3.upload_fileobj(output, bucket_name, 'DataAnalysis/Input/{}'.format(s3_key))
+
+    # Generate the S3 file URL
+    s3_url = f"s3://{bucket_name}.s3.amazonaws.com/DataAnalysis/Input/{s3_key}"
+
+    # Return the S3 path
     return jsonify({
-        'columns': column_names
+        's3_path': s3_url
     })
 
 @app.route('/awsextract', methods=['POST'])

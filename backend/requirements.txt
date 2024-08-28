@@ -26,3 +26,5 @@ zipp
 openpyxl
 flask-cors 
 mysql-connector-python          
+python-dotenv
+XlsxWriter
