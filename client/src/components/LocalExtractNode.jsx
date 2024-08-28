@@ -3,18 +3,23 @@ import { Handle, Position } from '@xyflow/react';
 
 const handleStyle = { left: 10 };
 
-function LocalExtractNode({id, data, isConnectable }) {
+function LocalExtractNode({ id, data, isConnectable }) {
   const [selectedFile, setSelectedFile] = useState(null);
+  const [sheetName, setSheetName] = useState(null);
 
   const onChange = useCallback((evt) => {
     setSelectedFile(evt.target.files[0]);
+  }, []);
+
+  const onChangeSheet = useCallback((evt) => {
+    console.log(evt.target.value);
   }, []);
 
   const handleDelete = () => {
     data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
   };
 
-  const handleExtract = async () => {
+  const handleSheets = async () => {
     if (selectedFile) {
       const formData = new FormData();
       formData.append('file', selectedFile);
@@ -27,6 +32,7 @@ function LocalExtractNode({id, data, isConnectable }) {
         });
         const data = await response.json();
         console.log(data); // Handle the response data (e.g., display sheet names and columns)
+        setSheetName(data.sheet_names);
       } catch (error) {
         console.error('Error:', error);
       }
@@ -52,12 +58,35 @@ function LocalExtractNode({id, data, isConnectable }) {
           onChange={onChange}
           className="nodrag"
         />
-        <button
+        {sheetName && (<select id="sheetName" name="sheetName" onChange={onChangeSheet} className='nodrag'>
+          <option value="">Select the Sheet:</option>
+          {sheetName?.map((file, index) => (
+            <option key={index} value={file}>{file}</option>
+          ))
+          }
+        </select>)}
+        {sheetName ? (
+          <button
+          className='bg-black text-white p-2 w-1/3 self-center mt-4'
+          // onClick={handleExtract}
+        >
+          Extract
+        </button>
+        ):(
+          <button
+          className='bg-black text-white p-2 w-1/3 self-center mt-4'
+          onClick={handleSheets}
+        >
+          Load Sheets
+        </button>
+          
+        )}
+        {/* <button
           className='bg-black text-white p-2 w-1/3 self-center mt-4'
           onClick={handleExtract}
         >
           Extract
-        </button>
+        </button> */}
       </div>
       <Handle
         type="source"
