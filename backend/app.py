@@ -8,7 +8,11 @@ from mysql.connector import Error
 from dotenv import load_dotenv
 import os
 from io import BytesIO
+from io import StringIO
 import xlsxwriter
+import pandasql as psql
+import tempfile
+import uuid
 
 load_dotenv()
 app = Flask(__name__)
@@ -165,7 +169,67 @@ def local_extract_sheet_to_s3():
             'error': 'Unsupported file type or missing sheet name.'
         }), 400
 
+@app.route('/run_sql_on_s3_csv', methods=['POST'])
+def run_sql_on_s3_csv():
+    try:
+        # Get the input parameters
+        s3_file_path = request.json.get('input_path')
+        sql_query = request.json.get('sql_query')
+        print(sql_query)
+        output_bucket = 'my-internal-bucket'
 
+        if not s3_file_path or not sql_query or not output_bucket:
+            return jsonify({'error': 'Missing required parameters'}), 400
+
+        # Parse the S3 path
+        bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
+        
+        file_name = key.split('/')[-1].split('.')[0]
+        print(file_name)
+        
+        s3 = boto3.client(
+            's3',
+            region_name=os.environ["region_name"],
+            aws_access_key_id=os.environ["aws_access_key_id"],
+            aws_secret_access_key=os.environ["aws_secret_access_key"]
+        )
+
+        # Download the CSV file from S3
+        csv_obj = s3.get_object(Bucket=bucket_name, Key=key)
+        csv_data = csv_obj['Body'].read().decode('utf-8')
+
+        # Load CSV into a pandas DataFrame
+        df = pd.read_csv(StringIO(csv_data))
+        
+        modified_sql_query = sql_query.replace(f'{file_name}', 'df')
+        print(modified_sql_query)
+
+        # Run the SQL query using pandasql
+        
+        query_result = psql.sqldf(modified_sql_query, locals())
+
+        # Generate a new CSV file from the result
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            query_result.to_csv(temp_file.name, index=False)
+            temp_file_path = temp_file.name
+
+        # Create a unique output key for the new file
+        output_key = f'output/{uuid.uuid4()}.csv'
+
+        # Upload the new CSV file to the specified S3 bucket
+        with open(temp_file_path, 'rb') as data:
+            s3.upload_fileobj(data, output_bucket, output_key)
+
+        # Clean up the temporary file
+        os.remove(temp_file_path)
+
+        # Generate the output S3 path
+        output_s3_path = f's3://{output_bucket}/{output_key}'
+
+        return jsonify({'output_path': output_s3_path}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/awsextract', methods=['POST'])
 def aws_extract():

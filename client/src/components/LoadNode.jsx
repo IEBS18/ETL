@@ -12,7 +12,7 @@ import mysql from '../assets/export/mysql.png';
 
 const handleStyle = { left: 10 };
 
-function SQLQueryNode({ id, data, isConnectable }) {
+function LoadNode({ id, data, isConnectable }) {
     const { updateNodeData } = useReactFlow();
     const [filePath, setfilePath] = useState('');
     const [query, setQuery] = useState('');
@@ -104,4 +104,4 @@ function SQLQueryNode({ id, data, isConnectable }) {
     );
 }
 
-export default SQLQueryNode;
+export default LoadNode;
