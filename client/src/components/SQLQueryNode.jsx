@@ -43,14 +43,14 @@ function SQLQueryNode({ id, data, isConnectable }) {
         };
     
         try {
-            const response = await fetch('https://7sgbnvivua.execute-api.us-east-1.amazonaws.com/Tool_V1', {
+            const response = await fetch('https://oo5cuo5zr63j7vk5shktzvilui0xxyno.lambda-url.us-east-1.on.aws/', {
                 method: 'POST',
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Credentials' : true,
-                    'Access-Control-Allow-Methods': '*',
+                    // 'Access-Control-Allow-Credentials' : true,
+                    // 'Access-Control-Allow-Methods': '*',
                     
                 },
                 body: JSON.stringify(payload), // Convert the JSON object to a string

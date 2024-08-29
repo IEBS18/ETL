@@ -13,12 +13,20 @@ function LocalExtractNode({ id, data, isConnectable }) {
   const { setNodes } = useReactFlow();
 
   const onChange = useCallback((evt) => {
-    setSelectedFile(evt.target.files[0]);
-    
+    const file = evt.target.files[0];
+    setSelectedFile(file);
+
+    // Reset sheet names and sheet selection if a new file is selected
+    setSheetName(null);
+    setSheet('');
+
+    if (file && file.name.endsWith('.csv')) {
+      // Directly call handleExtract for .csv files
+      handleExtract();
+    }
   }, []);
 
   const onChangeSheet = useCallback((evt) => {
-    console.log(evt.target.value);
     setSheet(evt.target.value);
   }, []);
 
@@ -30,7 +38,6 @@ function LocalExtractNode({ id, data, isConnectable }) {
     if (selectedFile) {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      // formData.append('sheet_name', 'Sheet1'); // Replace 'Sheet1' with the actual sheet name you want to extract columns from
 
       try {
         const response = await fetch('http://127.0.0.1:5000/localextract', {
@@ -38,7 +45,6 @@ function LocalExtractNode({ id, data, isConnectable }) {
           body: formData,
         });
         const data = await response.json();
-        console.log(data); // Handle the response data (e.g., display sheet names and columns)
         setSheetName(data.sheet_names);
       } catch (error) {
         console.error('Error:', error);
@@ -47,25 +53,24 @@ function LocalExtractNode({ id, data, isConnectable }) {
       console.error('No file selected');
     }
   };
+
   const handleExtract = async () => {
     if (selectedFile) {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('sheetName', sheet);
-      // formData.append('sheet_name', 'Sheet1'); // Replace 'Sheet1' with the actual sheet name you want to extract columns from
+
       try {
         const response = await fetch('http://127.0.0.1:5000/localextractsheet', {
           method: 'POST',
           body: formData,
         });
         const data = await response.json();
-        console.log(data); // Handle the response data (e.g., display sheet names and columns)
-        setNodes((nds) => 
-          nds.map((node) => 
+        setNodes((nds) =>
+          nds.map((node) =>
             node.id === id ? { ...node, data: { ...node.data, filePath: data.s3_path } } : node
           )
         );
-        // setSheetName(data.sheet_names);
       } catch (error) {
         console.error('Error:', error);
       }
@@ -91,35 +96,40 @@ function LocalExtractNode({ id, data, isConnectable }) {
           onChange={onChange}
           className="nodrag mt-2"
         />
-        {sheetName && (<select id="sheetName" name="sheetName" onChange={onChangeSheet} className='nodrag mt-2'>
-          <option value="">Select the Sheet:</option>
-          {sheetName?.map((file, index) => (
-            <option key={index} value={file}>{file}</option>
-          ))
-          }
-        </select>)}
-        {sheetName ? (
-          <button
-          className='bg-black text-white p-2 w-auto self-center mt-4'
-          onClick={handleExtract}
-        >
-          Extract
-        </button>
-        ):(
-          <button
-          className='bg-black text-white p-2 w-auto self-center mt-4'
-          onClick={handleSheets}
-        >
-          Load Sheets
-        </button>
-          
+        {sheetName && selectedFile.name.endsWith('.xlsx') && (
+          <select id="sheetName" name="sheetName" onChange={onChangeSheet} className='nodrag mt-2'>
+            <option value="">Select the Sheet:</option>
+            {sheetName?.map((file, index) => (
+              <option key={index} value={file}>{file}</option>
+            ))}
+          </select>
         )}
-        {/* <button
-          className='bg-black text-white p-2 w-1/3 self-center mt-4'
-          onClick={handleExtract}
-        >
-          Extract
-        </button> */}
+        {selectedFile ? (
+          selectedFile.name.endsWith('.xlsx') ? (
+            sheetName ? (
+              <button
+                className='bg-black text-white p-2 w-auto self-center mt-4'
+                onClick={handleExtract}
+              >
+                Extract
+              </button>
+            ) : (
+              <button
+                className='bg-black text-white p-2 w-auto self-center mt-4'
+                onClick={handleSheets}
+              >
+                Load Sheets
+              </button>
+            )
+          ) : (
+            <button
+              className='bg-black text-white p-2 w-auto self-center mt-4'
+              onClick={handleExtract}
+            >
+              Extract
+            </button>
+          )
+        ) : null}
       </div>
       <Handle
         type="source"
