@@ -11,8 +11,11 @@ import AwsPopUp from "../pages/AwsPopUp";
 import awsS3 from "../assets/export/awsS3.png";
 const handleStyle = { left: 10 };
 
-function AWSExtractNode({ data, isConnectable }) {
+function AWSExtractNode({id, data, isConnectable }) {
   const [AwsData, setAwsData] = useState(null);
+  const [fileUpload, setFileUpload] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const onChange = useCallback((evt) => {
@@ -23,6 +26,10 @@ function AWSExtractNode({ data, isConnectable }) {
     setAwsData(data);
   };
 
+  const onSaveForm = (data) => {
+    setFormData(data);
+  };
+
   const onPopUpOpen = () => {
     setIsDialogOpen(true);
   };
@@ -31,12 +38,48 @@ function AWSExtractNode({ data, isConnectable }) {
     setIsDialogOpen(false);
   };
 
+  const handleSelectedFile = (evt) => {
+    setSelectedFile(evt.target.value);
+    // setFileUpload(true);
+  };
+
+  const UploadToS3 = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      alert("Please select a file first!");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/upload-to-s3", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...formData, filePath: selectedFile }),
+      });
+
+      if (response.ok) {
+        data = await response.json();
+        console.log("Data:", data);
+        // alert("File uploaded successfully!");
+        setFileUpload(true);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to upload file: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("An error occurred during the upload.");
+    }
+  };
+
   const handleDelete = () => {
     data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
   };
 
-   // Filter and build tree structure
-   const buildFilteredTree = (paths) => {
+  // Filter and build tree structure
+  const buildFilteredTree = (paths) => {
     const tree = {};
 
     // Filter paths for .csv or .xlsx files
@@ -92,7 +135,7 @@ function AWSExtractNode({ data, isConnectable }) {
           <option key={currentPath} disabled>
             {currentPath}/
           </option>,
-          ...renderOptions(value, `${currentPath}/`)
+          ...renderOptions(value, `${currentPath}/`),
         ];
       }
     });
@@ -106,33 +149,33 @@ function AWSExtractNode({ data, isConnectable }) {
       >
         &times;
       </button>
-    <div className="text-updater-node">
-      {/* <Handle
+      <div className="text-updater-node">
+        {/* <Handle
         type="target"
         position={Position.Top}
         isConnectable={isConnectable}
       /> */}
-      <div className="text-sm border-2 border-black w-full flex flex-col p-2">
-        <p>AWS</p>
+        <div className="text-sm border-2 border-black w-full flex flex-col p-2">
+          <p>AWS</p>
 
-        {AwsData ? (
-          <div>
-            <label htmlFor="fileSelect">Select File:</label>
-            <select
-              id="fileSelect"
-              name="fileSelect"
-              onChange={onChange}
-              className="nodrag"
-            >
-              <option value="">Select a file</option>
-              {renderOptions(buildFilteredTree(AwsData.objects))}
-            </select>
-          </div>
-        ) : (
-          <p>Loading files...</p>
-        )}
-        {/* <label htmlFor="text">AWS Bucket Key:</label> */}
-        {/* <input
+          {AwsData ? (
+            <div>
+              <label htmlFor="fileSelect">Select File:</label>
+              <select
+                id="fileSelect"
+                name="fileSelect"
+                onChange={handleSelectedFile}
+                className="nodrag"
+              >
+                <option value="">Select a file</option>
+                {renderOptions(buildFilteredTree(AwsData.objects))}
+              </select>
+            </div>
+          ) : (
+            <p>Loading files...</p>
+          )}
+          {/* <label htmlFor="text">AWS Bucket Key:</label> */}
+          {/* <input
           id="text"
           name="text"
           type="text"
@@ -140,15 +183,26 @@ function AWSExtractNode({ data, isConnectable }) {
           className="nodrag"
         /> */}
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <button
-              className="bg-black text-white p-2 w-auto self-center mt-4"
-              onClick={onPopUpOpen}
-            >
-              {AwsData ? "Load Data" : "Connect Account"}
-            </button>
-            {/* <button
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              {AwsData ? (
+                <button
+                  className="bg-black text-white p-2 w-auto self-center mt-4"
+                  onClick={UploadToS3}
+                  disabled={fileUpload}
+                >
+                  {fileUpload ? "File's been Uploaded" : "Upload File"}
+                </button>
+              ) : (
+                <button
+                  className="bg-black text-white p-2 w-auto self-center mt-4"
+                  onClick={onPopUpOpen}
+                >
+                  {AwsData ? "Load File" : "Connect Account"}
+                </button>
+              )}
+
+              {/* <button
               className={`p-2 w-auto self-center mt-4 ${
                 AwsData === null
                   ? "bg-gray-500 cursor-not-allowed"
@@ -158,32 +212,36 @@ function AWSExtractNode({ data, isConnectable }) {
             >
               Connect Account
             </button> */}
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <img src={awsS3} alt="awsS3" className="h-8 w-8" />
-                <span>Connect AWS S3</span>
-              </DialogTitle>
-            </DialogHeader>
-            <AwsPopUp onSave={onSave} closePopUp={onPopUpClose} />
-          </DialogContent>
-        </Dialog>
-      </div>
-      {/* <Handle
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle className="flex items-center space-x-2">
+                  <img src={awsS3} alt="awsS3" className="h-8 w-8" />
+                  <span>Connect AWS S3</span>
+                </DialogTitle>
+              </DialogHeader>
+              <AwsPopUp
+                onSave={onSave}
+                closePopUp={onPopUpClose}
+                onSaveForm={onSaveForm}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+        {/* <Handle
         type="source"
         position={Position.Bottom}
         id="a"
         style={handleStyle}
         isConnectable={isConnectable}
       /> */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="b"
-        isConnectable={isConnectable}
-      />
-    </div>
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="b"
+          isConnectable={isConnectable}
+        />
+      </div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { EyeIcon, EyeOffIcon } from 'lucide-react';
 
-export default function AwsPopUp({onSave, closePopUp}) {
+export default function AwsPopUp({onSave, closePopUp, onSaveForm}) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     accessKeyId: '',
@@ -31,7 +31,8 @@ export default function AwsPopUp({onSave, closePopUp}) {
         },
         body: new URLSearchParams(formData),
       });
-
+      
+      onSaveForm(formData);
       const data = await response.json();
       onSave(data);
       closePopUp();
