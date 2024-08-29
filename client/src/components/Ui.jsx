@@ -1,31 +1,64 @@
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronLeft, Share, Play, Settings, ChevronDown, } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import awsS3 from "../assets/export/awsS3.png";
 import mysql from "../assets/export/mysql.png";
 import file from "../assets/export/file.png";
 import script from '../assets/transform/script.png';
-import download from '../assets/load/download.png'
+import download from '../assets/load/download.png';
+
 import { useDnD } from './DnDContext';
-import LocalExtractNode from "./LocalExtractNode";
-import { useCallback, useState } from 'react';
 
-// const nodeTypes = { localExtractor: LocalExtractNode };
-
-export default function Component() {
+export default function Component({ nodes, edges, setNodes, setEdges }) {
   const generalItems = [
-    { name: "Local", icon: <img src={file} alt="file" className="h-4 w-4"/>, type:"LocalExtractor" },
-    { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4"/>, type: "AWSExtractor"},
-    { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLExtractor"},
+    { name: "Local", icon: <img src={file} alt="file" className="h-4 w-4" />, type: "LocalExtractor" },
+    { name: "Amazon S3", icon: <img src={awsS3} alt="sql" className="h-4 w-4" />, type: "AWSExtractor" },
+    { name: "SQL Server", icon: <img src={mysql} alt="awsS3" className="h-4 w-4" />, type: "SQLExtractor" },
   ];
   const TransformItems = [
-    { name: "SQL Query", icon:  <img src={script} alt="sql" className="h-4 w-4"/>, type: "SQLQuery"},
+    { name: "SQL Query", icon: <img src={script} alt="sql" className="h-4 w-4" />, type: "SQLQuery" },
   ];
   const LoadItems = [
-    { name: "Download", icon:  <img src={download} alt="file" className="h-4 w-4"/>, type: "FileLoad"},
+    { name: "Download", icon: <img src={download} alt="file" className="h-4 w-4" />, type: "FileLoad" },
   ];
+
+  const [flowName, setFlowName] = useState('Untitled Pipeline');
+  const [savedFlows, setSavedFlows] = useState([]);
+
+  useEffect(() => {
+    // Load saved flows from localStorage when the component mounts
+    const storedFlows = JSON.parse(localStorage.getItem('savedFlows')) || [];
+    setSavedFlows(storedFlows);
+  }, []);
+
+  const handleSaveFlow = () => {
+    const currentFlow = {
+      name: flowName,
+      nodes,
+      edges,
+    };
+    const updatedFlows = [...savedFlows, currentFlow];
+    setSavedFlows(updatedFlows);
+    localStorage.setItem('savedFlows', JSON.stringify(updatedFlows));
+    alert(`Flow "${flowName}" saved successfully!`);
+  };
+
+  const handleRestoreFlow = (selectedFlow) => {
+    setFlowName(selectedFlow.name);
+    const restoredNodes = selectedFlow.nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        setNodes, // Reassign the setNodes function
+      },
+    }));
+    setNodes(restoredNodes);
+    setEdges(selectedFlow.edges || []);
+    alert(`Flow "${selectedFlow.name}" restored!`);
+  };
 
   const [_, setType] = useDnD();
 
@@ -33,8 +66,6 @@ export default function Component() {
     setType(nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
-
-
 
   return (
     <div className="flex flex-col bg-background">
@@ -46,28 +77,31 @@ export default function Component() {
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium">Pipelines</span>
             <span className="text-sm text-muted-foreground">&gt;</span>
-            <Input 
+            <Input
               className="h-8 w-40"
-              defaultValue="Untitled Pipeline"
+              value={flowName}
+              onChange={(e) => setFlowName(e.target.value)}
             />
           </div>
-          <Button variant="ghost" size="sm">
-            Edit
+          <Button variant="ghost" size="sm" onClick={handleSaveFlow}>
+            Save
           </Button>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="bg-green-500 text-white hover:bg-green-600">
-            Save Pipeline
-          </Button>
-          {/* <Button variant="ghost" size="icon">
-            <Share className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Play className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Settings className="h-4 w-4" />
-          </Button> */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="bg-green-500 text-white hover:bg-green-600">
+                Load Saved Flows
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              {savedFlows.map((flow, index) => (
+                <DropdownMenuItem key={index} onClick={() => handleRestoreFlow(flow)}>
+                  {flow.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
       <Tabs defaultValue="extract" className="">
@@ -75,48 +109,50 @@ export default function Component() {
           <TabsTrigger value="extract">Extract</TabsTrigger>
           <TabsTrigger value="transform">Transform</TabsTrigger>
           <TabsTrigger value="load">Load</TabsTrigger>
-          {/* <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="data-loaders">Data Loaders</TabsTrigger>
-          <TabsTrigger value="multi-modal">Multi-Modal</TabsTrigger>
-          <TabsTrigger value="logic">Logic</TabsTrigger>
-          <TabsTrigger value="chat">Chat</TabsTrigger> */}
         </TabsList>
         <TabsContent value="transform" className="p-4 bg-gray-50">
           <div className="flex space-x-2">
             {TransformItems.map((item) => (
-              <DropdownMenu key={item.name}>
-                  <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
-                    <span className="mr-2">{item.icon}</span>
-                    {item.name}
-                    {/* <ChevronDown className="ml-2 h-4 w-4" /> */}
-                  </Button>
-              </DropdownMenu>
+              <Button
+                key={item.name}
+                variant="outline"
+                className="h-10 px-3 py-2"
+                onDragStart={(event) => onDragStart(event, item.type)} draggable
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.name}
+              </Button>
             ))}
           </div>
         </TabsContent>
         <TabsContent value="load" className="p-4 bg-gray-50">
           <div className="flex space-x-2">
             {LoadItems.map((item) => (
-              <DropdownMenu key={item.name}>
-                  <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
-                    <span className="mr-2">{item.icon}</span>
-                    {item.name}
-                    {/* <ChevronDown className="ml-2 h-4 w-4" /> */}
-                  </Button>
-              </DropdownMenu>
+              <Button
+                key={item.name}
+                variant="outline"
+                className="h-10 px-3 py-2"
+                onDragStart={(event) => onDragStart(event, item.type)} draggable
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.name}
+              </Button>
             ))}
           </div>
         </TabsContent>
         <TabsContent value="extract" className="p-4 bg-gray-50">
           <div className="flex space-x-2">
             {generalItems.map((item) => (
-              <DropdownMenu key={item.name}>
-                  <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
-                    <span className="mr-2">{item.icon}</span>
-                    {item.name}
-                    {/* <ChevronDown className="ml-2 h-4 w-4" /> */}
-                  </Button>
-              </DropdownMenu>
+              <Button
+                key={item.name}
+                variant="outline"
+                className="h-10 px-3 py-2"
+                onDragStart={(event) => onDragStart(event, item.type)}
+                draggable
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.name}
+              </Button>
             ))}
           </div>
         </TabsContent>

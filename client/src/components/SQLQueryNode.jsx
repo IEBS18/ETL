@@ -95,7 +95,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
                     <p><strong>File Path:</strong> {data.filePath || 'N/A'}</p>
                 </div>
                 <label htmlFor="text">SQL Query:</label>
-                <textarea id="text" name="text" type='text' onChange={onChange} className="nodrag" placeholder="SELECT * FROM TABLES;" />
+                <textarea id="text" name="text" type='text' onChange={onChange} className="nodrag" placeholder="SELECT * FROM TABLE;" />
                 <button className="bg-black text-white p-2 w-auto self-center mt-4" onClick={handleTransform}>
                     Transform
                 </button>

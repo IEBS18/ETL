@@ -214,7 +214,7 @@ def run_sql_on_s3_csv():
             temp_file_path = temp_file.name
 
         # Create a unique output key for the new file
-        output_key = f'output/{uuid.uuid4()}.csv'
+        output_key = f'DataAnalysis/Output/{uuid.uuid4()}.csv'
 
         # Upload the new CSV file to the specified S3 bucket
         with open(temp_file_path, 'rb') as data:

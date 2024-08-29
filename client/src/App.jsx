@@ -24,13 +24,10 @@ import SQLQueryNode from './components/SQLQueryNode';
 import CustomEdge from './components/CustomEdge';
 import LoadNode from './components/LoadNode';
 
-
-
-
 const edgeTypes = {
-  custom: CustomEdge, // Add your custom edge
+  custom: CustomEdge,
 };
-const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode , SQLQuery: SQLQueryNode, FileLoad: LoadNode};
+const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode, SQLQuery: SQLQueryNode, FileLoad: LoadNode };
 
 let id = 0;
 const getId = () => `dndnode_${id++}`;
@@ -41,11 +38,6 @@ const DnDFlow = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { screenToFlowPosition } = useReactFlow();
   const [type] = useDnD();
-
-  // const onConnect = useCallback(
-  //   (params) => setEdges((eds) => addEdge(params, eds)),
-  //   [],
-  // );
 
   const onConnect = (params) => {
     const sourceNode = nodes.find(node => node.id === params.source);
@@ -102,11 +94,53 @@ const DnDFlow = () => {
     [screenToFlowPosition, type, nodes, setNodes],
   );
 
+  // const handleSave = () => {
+  //   const flow = {
+  //     nodes,
+  //     edges,
+  //   };
+  //   localStorage.setItem('flow', JSON.stringify(flow));
+  //   alert('Flow saved!');
+  // };
+
+  // const handleRestore = () => {
+  //   const flow = JSON.parse(localStorage.getItem('flow'));
+  //   if (flow) {
+  //     const restoredNodes = flow.nodes.map((node) => ({
+  //       ...node,
+  //       data: {
+  //         ...node.data,
+  //         setNodes: setNodes, // Reassign the setNodes function
+  //       },
+  //     }));
+
+  //     setNodes(restoredNodes);
+  //     setEdges(flow.edges || []);
+  //     alert('Flow restored!');
+  //   } else {
+  //     alert('No flow data found!');
+  //   }
+  // };
+
+
   return (
     <div className="flex flex-col">
       {/* <Sidebar /> */}
-      <Component />
-      <div className="reactflow-wrapper" style={{ width: '100vw', height: '71vh' }} ref={reactFlowWrapper}>
+      <Component
+        nodes={nodes}
+        edges={edges}
+        setNodes={setNodes}
+        setEdges={setEdges}
+      />
+      {/* <div className="mb-4">
+        <button onClick={handleSave} className="px-4 py-2 mr-2 bg-blue-500 text-white rounded">
+          Save
+        </button>
+        <button onClick={handleRestore} className="px-4 py-2 bg-green-500 text-white rounded">
+          Restore
+        </button>
+      </div> */}
+      <div className="reactflow-wrapper" style={{ width: '100vw', height: '53vh' }} ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -128,7 +162,6 @@ const DnDFlow = () => {
     </div>
   );
 };
-
 
 export default () => (
   <div >
