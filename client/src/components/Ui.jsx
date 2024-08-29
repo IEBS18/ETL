@@ -2,10 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronLeft, Share, Play, Settings, ChevronDown, Upload } from "lucide-react";
+import { ChevronLeft, Share, Play, Settings, ChevronDown, } from "lucide-react";
 import awsS3 from "../assets/export/awsS3.png";
 import mysql from "../assets/export/mysql.png";
 import file from "../assets/export/file.png";
+import script from '../assets/transform/script.png';
+import download from '../assets/load/download.png'
 import { useDnD } from './DnDContext';
 import LocalExtractNode from "./LocalExtractNode";
 import { useCallback, useState } from 'react';
@@ -19,10 +21,10 @@ export default function Component() {
     { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLExtractor"},
   ];
   const TransformItems = [
-    { name: "SQL Query", icon:  <img src={mysql} alt="sql" className="h-4 w-4"/>, type: "SQLQuery"},
+    { name: "SQL Query", icon:  <img src={script} alt="sql" className="h-4 w-4"/>, type: "SQLQuery"},
   ];
   const LoadItems = [
-    { name: "Download", icon:  <img src={file} alt="file" className="h-4 w-4"/>, type: "FileLoad"},
+    { name: "Download", icon:  <img src={download} alt="file" className="h-4 w-4"/>, type: "FileLoad"},
   ];
 
   const [_, setType] = useDnD();
@@ -55,9 +57,9 @@ export default function Component() {
         </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm" className="bg-green-500 text-white hover:bg-green-600">
-            Changes Deployed
+            Save Pipeline
           </Button>
-          <Button variant="ghost" size="icon">
+          {/* <Button variant="ghost" size="icon">
             <Share className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon">
@@ -65,7 +67,7 @@ export default function Component() {
           </Button>
           <Button variant="ghost" size="icon">
             <Settings className="h-4 w-4" />
-          </Button>
+          </Button> */}
         </div>
       </header>
       <Tabs defaultValue="extract" className="">

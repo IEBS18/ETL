@@ -40,7 +40,7 @@ function AWSExtractNode({id, data, isConnectable }) {
 
   const handleSelectedFile = (evt) => {
     setSelectedFile(evt.target.value);
-    // setFileUpload(true);
+    setFileUpload(false);
   };
 
   const UploadToS3 = async (e) => {
