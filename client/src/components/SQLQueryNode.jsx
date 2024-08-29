@@ -10,10 +10,15 @@ import { Handle, Position, useHandleConnections, useNodesData, useReactFlow } fr
 import SqlPopUp from '../pages/SqlPopUp';
 import mysql from '../assets/export/mysql.png';
 
+import { useMemo, memo } from "react";
+
 const handleStyle = { left: 10 };
+
+
 
 function SQLQueryNode({ id, data, isConnectable }) {
     const { updateNodeData } = useReactFlow();
+    const { setNodes } = useReactFlow();
     const [filePath, setfilePath] = useState('');
     const [query, setQuery] = useState('');
     const connections = useHandleConnections({
@@ -58,9 +63,10 @@ function SQLQueryNode({ id, data, isConnectable }) {
     
             const data = await response.json();
             console.log(data);
+            console.log(data.output_path);
             setNodes((nds) =>
                 nds.map((node) =>
-                  node.id === id ? { ...node, data: { ...node.data, outputPath: data.output_path } } : node
+                  node.id === id ? { ...node, data: { ...node.data, filePath: data.output_path } } : node
                 )
               );
         } catch (error) {
@@ -70,7 +76,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
     
 
     return (
-        <div className="text-updater-node relative">
+        <div className="text-updater-node relative " >
             <Handle
                 type="target"
                 position={Position.Top}
@@ -83,7 +89,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
             >
                 &times;
             </button>
-            <div className='text-sm border-2 border-black w-full flex flex-col p-2'>
+            <div className='text-sm border-2 border-black w-full flex flex-col p-2 pb-6'>
                 <div>
                     <p><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
                     <p><strong>File Path:</strong> {data.filePath || 'N/A'}</p>
@@ -97,11 +103,11 @@ function SQLQueryNode({ id, data, isConnectable }) {
             <Handle
                 type="source"
                 position={Position.Bottom}
-                id="b"
+                id="c"
                 isConnectable={isConnectable}
             />
         </div>
     );
 }
 
-export default SQLQueryNode;
+export default memo(SQLQueryNode);

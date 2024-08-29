@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import pandas as pd
 import boto3
 import pyodbc
@@ -230,6 +230,40 @@ def run_sql_on_s3_csv():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+    
+@app.route('/downloadfroms3', methods=['POST'])
+def download_from_s3():
+    s3_path = request.json.get('output_path')  # e.g., s3://bucket-name/file.csv
+    if not s3_path:
+        return jsonify({"error": "No path provided"}), 400
+    
+    # Parse S3 path
+    bucket_name, key = s3_path.replace('s3://', '').split('/', 1)
+    
+    print(bucket_name, key)
+    
+    s3_client = boto3.client(
+        's3',
+        region_name=os.environ["region_name"],
+        aws_access_key_id=os.environ["aws_access_key_id"],
+        aws_secret_access_key=os.environ["aws_secret_access_key"]
+    )
+    
+    # Download file from S3
+    s3_object = s3_client.get_object(Bucket=bucket_name, Key=key)
+    file_content = s3_object['Body'].read()
+    
+    # Create an in-memory file-like object
+    file_like_object = BytesIO(file_content)
+    
+    # Serve file as download
+    return send_file(file_like_object, download_name='output', as_attachment=True)
+    
+    # except NoCredentialsError:
+    #     return jsonify({"error": "AWS credentials not found"}), 403
+    # except PartialCredentialsError:
+    #     return jsonify({"error": "Incomplete AWS credentials"}), 403
 
 @app.route('/awsextract', methods=['POST'])
 def aws_extract():

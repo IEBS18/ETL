@@ -19,7 +19,10 @@ export default function Component() {
     { name: "SQL Server", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLExtractor"},
   ];
   const TransformItems = [
-    { name: "SQL Query", icon:  <img src={mysql} alt="awsS3" className="h-4 w-4"/>, type: "SQLQuery"},
+    { name: "SQL Query", icon:  <img src={mysql} alt="sql" className="h-4 w-4"/>, type: "SQLQuery"},
+  ];
+  const LoadItems = [
+    { name: "Download", icon:  <img src={file} alt="file" className="h-4 w-4"/>, type: "FileLoad"},
   ];
 
   const [_, setType] = useDnD();
@@ -79,6 +82,19 @@ export default function Component() {
         <TabsContent value="transform" className="p-4 bg-gray-50">
           <div className="flex space-x-2">
             {TransformItems.map((item) => (
+              <DropdownMenu key={item.name}>
+                  <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
+                    <span className="mr-2">{item.icon}</span>
+                    {item.name}
+                    {/* <ChevronDown className="ml-2 h-4 w-4" /> */}
+                  </Button>
+              </DropdownMenu>
+            ))}
+          </div>
+        </TabsContent>
+        <TabsContent value="load" className="p-4 bg-gray-50">
+          <div className="flex space-x-2">
+            {LoadItems.map((item) => (
               <DropdownMenu key={item.name}>
                   <Button variant="outline" className="h-10 px-3 py-2" onDragStart={(event) => onDragStart(event, item.type)} draggable>
                     <span className="mr-2">{item.icon}</span>

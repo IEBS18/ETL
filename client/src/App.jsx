@@ -21,9 +21,10 @@ import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from './components/AWSExtractNode';
 import SQLExtractNode from './components/SQLExtractNode';
 import SQLQueryNode from './components/SQLQueryNode';
+import LoadNode from './components/LoadNode';
 
 
-const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode , SQLQuery: SQLQueryNode};
+const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode , SQLQuery: SQLQueryNode, FileLoad: LoadNode};
 
 let id = 0;
 const getId = () => `dndnode_${id++}`;

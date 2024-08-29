@@ -5,10 +5,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { useCallback, useState } from 'react';
+import { useCallback, useState, memo } from 'react';
 import { Handle, Position, useHandleConnections, useNodesData, useReactFlow } from '@xyflow/react';
 import SqlPopUp from '../pages/SqlPopUp';
 import mysql from '../assets/export/mysql.png';
+
 
 const handleStyle = { left: 10 };
 
@@ -23,46 +24,47 @@ function LoadNode({ id, data, isConnectable }) {
     const nodesData = useNodesData(connections.source);
     console.log(nodesData?.id);
 
-    const onChange = useCallback((evt) => {
-        console.log(evt.target.value);
-        setQuery(evt.target.value);
-    }, []);
+    // const onChange = useCallback((evt) => {
+    //     console.log(evt.target.value);
+    //     setQuery(evt.target.value);
+    // }, []);
 
     const handleDelete = () => {
         data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
     };
 
-    const handleTransform = async () => {
+    const handleLoad = async () => {
         console.log(data.filePath);
-        setfilePath(data.filePath);
-    
-        // Create a JSON object instead of FormData
+        // setfilePath(data.filePath);
         const payload = {
-            input_path: data.filePath,
-            sql_query: query,
+            output_path: data.filePath,
         };
     
         try {
-            const response = await fetch('http://localhost:5000/run_sql_on_s3_csv', {
+            const response = await fetch('http://localhost:5000/downloadfroms3', {
                 method: 'POST',
                 headers: {
                     'Access-Control-Allow-Origin': '*',
                     'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Content-Type': 'application/json',
-                    // 'Access-Control-Allow-Credentials' : true,
-                    // 'Access-Control-Allow-Methods': '*',
-                    
                 },
                 body: JSON.stringify(payload), // Convert the JSON object to a string
             });
-    
-            const data = await response.json();
-            console.log(data);
-            setNodes((nds) =>
-                nds.map((node) =>
-                  node.id === id ? { ...node, data: { ...node.data, outputPath: data.output_path } } : node
-                )
-              );
+
+            const blob = await response.blob();
+
+            // Create a URL for the file and trigger a download
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'output.csv'); // Filename to be downloaded
+            document.body.appendChild(link);
+            link.click();
+        
+            // Clean up
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
         } catch (error) {
             console.error(error);
         }
@@ -88,20 +90,14 @@ function LoadNode({ id, data, isConnectable }) {
                     <p><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
                     <p><strong>File Path:</strong> {data.filePath || 'N/A'}</p>
                 </div>
-                <label htmlFor="text">SQL Query:</label>
-                <textarea id="text" name="text" type='text' onChange={onChange} className="nodrag" placeholder="SELECT * FROM TABLES;" />
-                <button className="bg-black text-white p-2 w-auto self-center mt-4" onClick={handleTransform}>
-                    Transform
+                {/* <label htmlFor="text">SQL Query:</label>
+                <textarea id="text" name="text" type='text' onChange={onChange} className="nodrag" placeholder="SELECT * FROM TABLES;" /> */}
+                <button className="bg-black text-white p-2 w-auto self-center mt-4" onClick={handleLoad}>
+                    Download
                 </button>
             </div>
-            <Handle
-                type="source"
-                position={Position.Bottom}
-                id="b"
-                isConnectable={isConnectable}
-            />
         </div>
     );
 }
 
-export default LoadNode;
+export default memo(LoadNode);
