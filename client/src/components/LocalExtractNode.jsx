@@ -53,7 +53,6 @@ function LocalExtractNode({ id, data, isConnectable }) {
       formData.append('file', selectedFile);
       formData.append('sheetName', sheet);
       // formData.append('sheet_name', 'Sheet1'); // Replace 'Sheet1' with the actual sheet name you want to extract columns from
-
       try {
         const response = await fetch('http://127.0.0.1:5000/localextractsheet', {
           method: 'POST',

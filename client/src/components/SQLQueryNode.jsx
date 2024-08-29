@@ -5,7 +5,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Handle, Position, useHandleConnections, useNodesData, useReactFlow } from '@xyflow/react';
 import SqlPopUp from '../pages/SqlPopUp';
 import mysql from '../assets/export/mysql.png';
@@ -14,6 +14,8 @@ const handleStyle = { left: 10 };
 
 function SQLQueryNode({ id, data, isConnectable }) {
     const { updateNodeData } = useReactFlow();
+    const [filePath, setfilePath] = useState('');
+    const [query, setQuery] = useState('');
     const connections = useHandleConnections({
         type: 'target',
     });
@@ -23,11 +25,44 @@ function SQLQueryNode({ id, data, isConnectable }) {
 
     const onChange = useCallback((evt) => {
         console.log(evt.target.value);
+        setQuery(evt.target.value);
     }, []);
 
     const handleDelete = () => {
         data.setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
     };
+
+    const handleTransform = async () => {
+        console.log(data.filePath);
+        setfilePath(data.filePath);
+    
+        // Create a JSON object instead of FormData
+        const payload = {
+            input_path: data.filePath,
+            sql_query: query,
+        };
+    
+        try {
+            const response = await fetch('https://7sgbnvivua.execute-api.us-east-1.amazonaws.com/Tool_V1', {
+                method: 'POST',
+                headers: {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Credentials' : true,
+                    'Access-Control-Allow-Methods': '*',
+                    
+                },
+                body: JSON.stringify(payload), // Convert the JSON object to a string
+            });
+    
+            const data = await response.json();
+            console.log(data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+    
 
     return (
         <div className="text-updater-node relative">
@@ -45,30 +80,14 @@ function SQLQueryNode({ id, data, isConnectable }) {
             </button>
             <div className='text-sm border-2 border-black w-full flex flex-col p-2'>
                 <div>
-                <p><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
-                <p><strong>File Path:</strong> {data.filePath || 'N/A'}</p>
+                    <p><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
+                    <p><strong>File Path:</strong> {data.filePath || 'N/A'}</p>
                 </div>
                 <label htmlFor="text">SQL Query:</label>
                 <textarea id="text" name="text" type='text' onChange={onChange} className="nodrag" placeholder="SELECT * FROM TABLES;" />
-                <button className="bg-black text-white p-2 w-auto self-center mt-4">
+                <button className="bg-black text-white p-2 w-auto self-center mt-4" onClick={handleTransform}>
                     Transform
                 </button>
-                {/* <Dialog>
-                    <DialogTrigger asChild>
-                        <button className="bg-black text-white p-2 w-auto self-center mt-4">
-                            Connect Account
-                        </button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center space-x-2">
-                                <img src={mysql} alt="mysql" className="h-8 w-8" />
-                                <span>Connect MySql Server</span>
-                            </DialogTitle>
-                        </DialogHeader>
-                        <SqlPopUp />
-                    </DialogContent>
-                </Dialog> */}
             </div>
             <Handle
                 type="target"

@@ -63,7 +63,7 @@ def local_to_s3():
     print("upload started")
 
     # Generate the S3 file URL
-    s3_url = f"s3://{bucket_name}.s3.amazonaws.com/DataAnalysis/Input/{s3_key}"
+    s3_url = f"s3://{bucket_name}/DataAnalysis/Input/{s3_key}"
 
     # Return the S3 path
     return jsonify({
