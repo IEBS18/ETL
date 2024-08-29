@@ -6,7 +6,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useCallback, useEffect, useState } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useReactFlow } from "@xyflow/react";
 import AwsPopUp from "../pages/AwsPopUp";
 import awsS3 from "../assets/export/awsS3.png";
 const handleStyle = { left: 10 };
@@ -17,7 +17,7 @@ function AWSExtractNode({id, data, isConnectable }) {
   const [formData, setFormData] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
+  const { setNodes } = useReactFlow();
   const onChange = useCallback((evt) => {
     console.log(evt.target.value);
   }, []);
@@ -64,6 +64,11 @@ function AWSExtractNode({id, data, isConnectable }) {
         console.log("Data:", data);
         // alert("File uploaded successfully!");
         setFileUpload(true);
+        setNodes((nds) => 
+          nds.map((node) => 
+            node.id === id ? { ...node, data: { ...node.data, filePath: data.filePath } } : node
+          )
+        );
       } else {
         const errorData = await response.json();
         alert(`Failed to upload file: ${errorData.error}`);

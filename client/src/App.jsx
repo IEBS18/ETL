@@ -21,9 +21,15 @@ import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from './components/AWSExtractNode';
 import SQLExtractNode from './components/SQLExtractNode';
 import SQLQueryNode from './components/SQLQueryNode';
+import CustomEdge from './components/CustomEdge';
 import LoadNode from './components/LoadNode';
 
 
+
+
+const edgeTypes = {
+  custom: CustomEdge, // Add your custom edge
+};
 const nodeTypes = { LocalExtractor: LocalExtractNode, AWSExtractor: AWSExtractNode, SQLExtractor: SQLExtractNode , SQLQuery: SQLQueryNode, FileLoad: LoadNode};
 
 let id = 0;
@@ -65,7 +71,7 @@ const DnDFlow = () => {
       );
     }
 
-    setEdges((eds) => addEdge(params, eds));
+    setEdges((eds) => addEdge({ ...params, type: 'custom' }, eds));
   };
 
   const onDragOver = useCallback((event) => {
@@ -111,6 +117,7 @@ const DnDFlow = () => {
           onDragOver={onDragOver}
           fitView
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
         >
           <Controls />
           <MiniMap />

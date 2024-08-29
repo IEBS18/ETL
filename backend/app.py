@@ -283,7 +283,6 @@ def aws_extract():
 
     return return_bucket(s3_client,bucket_name)
 
-
 def return_bucket(s3_client,bucket_name):
     buckets = s3_client.list_buckets()
     bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
@@ -297,16 +296,54 @@ def return_bucket(s3_client,bucket_name):
         'objects': object_names
     })
 
-
 @app.route('/upload-to-s3', methods=['POST'])
-def upload_to_s3():
+# def upload_to_s3():
 
+#     s3_server = boto3.client(
+#         's3',
+#         region_name=os.environ["region_name"],
+#         aws_access_key_id=os.environ["aws_access_key_id"],
+#         aws_secret_access_key=os.environ["aws_secret_access_key"]
+#                       )
+#     try:
+#         data = request.get_json()
+#         region_name = data.get('region')
+#         access_key_id = data.get('accessKeyId')
+#         secret_access_key = data.get('secretAccessKey')
+#         bucket_name = data.get('bucketName')
+#         file_path = data.get('filePath')
+
+#     #AWS S3 connection
+#         s3_client = boto3.client(
+#         's3',
+#         region_name=region_name,
+#         aws_access_key_id=access_key_id,
+#         aws_secret_access_key=secret_access_key
+#     )
+
+
+#         if not file_path:
+#             return jsonify({'error': 'File path is required'}), 400
+
+#         # Fetch the file from the original S3 bucket
+#         file_obj = s3_client.get_object(Bucket=bucket_name, Key=file_path)
+#         destination_bucket = 'my-internal-bucket'
+#         target_path = f"DataAnalysis/Input/{os.path.basename(file_path)}"
+#         # Upload the file to your server's S3 bucket
+
+#         s3_server.upload_fileobj(file_obj['Body'], destination_bucket, target_path)
+
+#         return jsonify({'message': 'File uploaded successfully!', 'filePath':f"s3://{bucket_name}/{file_path}"}), 200
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+def upload_to_s3():
     s3_server = boto3.client(
         's3',
         region_name=os.environ["region_name"],
         aws_access_key_id=os.environ["aws_access_key_id"],
         aws_secret_access_key=os.environ["aws_secret_access_key"]
-                      )
+    )
+    
     try:
         data = request.get_json()
         region_name = data.get('region')
@@ -315,34 +352,50 @@ def upload_to_s3():
         bucket_name = data.get('bucketName')
         file_path = data.get('filePath')
 
-    #AWS S3 connection
+        # AWS S3 connection
         s3_client = boto3.client(
-        's3',
-        region_name=region_name,
-        aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
-    )
-
+            's3',
+            region_name=region_name,
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key
+        )
 
         if not file_path:
             return jsonify({'error': 'File path is required'}), 400
 
         # Fetch the file from the original S3 bucket
         file_obj = s3_client.get_object(Bucket=bucket_name, Key=file_path)
+        file_content = file_obj['Body'].read()
+        file_name = os.path.basename(file_path)
+
+        # Check if the file is an .xlsx file
+        if file_name.endswith('.xlsx'):
+            # Convert the Excel file to a CSV file
+            workbook = pd.ExcelFile(BytesIO(file_content))
+            sheet_name = workbook.sheet_names[0]  # Select the first sheet or customize as needed
+            df = pd.read_excel(workbook, sheet_name=sheet_name)
+
+            # Convert DataFrame to CSV in memory
+            output = BytesIO()
+            df.to_csv(output, index=False)
+            output.seek(0)
+
+            # Update the file path and content for uploading the CSV
+            file_name = f"{os.path.splitext(file_name)[0]}.csv"
+            file_content = output
+        else:
+            # If it's a CSV, just use the original content
+            file_content = BytesIO(file_content)
+
         destination_bucket = 'my-internal-bucket'
-        target_path = f"DataAnalysis/Input/{os.path.basename(file_path)}"
-        # Upload the file to your server's S3 bucket
+        target_path = f"DataAnalysis/Input/{file_name}"
 
-        s3_server.upload_fileobj(file_obj['Body'], destination_bucket, target_path)
+        # Upload the file (either original CSV or converted CSV) to your server's S3 bucket
+        s3_server.upload_fileobj(file_content, destination_bucket, target_path)
 
-        return jsonify({'message': 'File uploaded successfully!', 'filePath':f"s3://{bucket_name}/{file_path}"}), 200
+        return jsonify({'message': 'File uploaded successfully!', 'filePath': f"s3://{destination_bucket}/{target_path}"}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-
-
-
 
 @app.route('/sqlextract', methods=['POST'])
 def sql_extract():
@@ -380,6 +433,7 @@ def sql_extract():
         if connection.is_connected():
             cursor.close()
             connection.close()
+
 if __name__ == '__main__':
     app.run(debug=True)
 
