@@ -12,7 +12,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { DnDProvider, useDnD } from './components/DnDContext';
-import Sidebar from './Sidebar';
 
 import './index.css';
 import Component from './components/Ui';
@@ -125,22 +124,13 @@ const DnDFlow = () => {
 
   return (
     <div className="flex flex-col">
-      {/* <Sidebar /> */}
       <Component
         nodes={nodes}
         edges={edges}
         setNodes={setNodes}
         setEdges={setEdges}
       />
-      {/* <div className="mb-4">
-        <button onClick={handleSave} className="px-4 py-2 mr-2 bg-blue-500 text-white rounded">
-          Save
-        </button>
-        <button onClick={handleRestore} className="px-4 py-2 bg-green-500 text-white rounded">
-          Restore
-        </button>
-      </div> */}
-      <div className="reactflow-wrapper" style={{ width: '100vw', height: '53vh' }} ref={reactFlowWrapper}>
+      <div className="reactflow-wrapper" style={{ width: '100vw', height: '71vh' }} ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -153,12 +143,11 @@ const DnDFlow = () => {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
         >
-          <Controls />
+          <Controls position='top-right'/>
           <MiniMap />
-          <Background variant="dots" gap={12} size={1} />
+          <Background variant="dots" gap={12} size={1} className='z-10' />
         </ReactFlow>
       </div>
-      {/* <Sidebar /> */}
     </div>
   );
 };
