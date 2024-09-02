@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 import pandas as pd
 import boto3
-import pyodbc
 from flask_cors import CORS
 import mysql.connector
 from mysql.connector import Error
