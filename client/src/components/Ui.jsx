@@ -233,7 +233,7 @@ import download from "../assets/load/download.png";
 import { useDnD } from "./DnDContext";
 
 export default function Component({ nodes, edges, setNodes, setEdges }) {
-  const [isSidebarOpen, setSidebarOpen] = useState(false); // State to toggle sidebar
+  const [isSidebarOpen, setSidebarOpen] = useState(true); // State to toggle sidebar
   const [flowName, setFlowName] = useState("Untitled Pipeline");
   const [savedFlows, setSavedFlows] = useState([]);
   const [_, setType] = useDnD();
@@ -249,11 +249,11 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       icon: <img src={awsS3} alt="sql" className="h-4 w-4" />,
       type: "AWSExtractor",
     },
-    {
-      name: "SQL Server",
-      icon: <img src={mysql} alt="awsS3" className="h-4 w-4" />,
-      type: "SQLExtractor",
-    },
+    // {
+    //   name: "SQL Server",
+    //   icon: <img src={mysql} alt="awsS3" className="h-4 w-4" />,
+    //   type: "SQLExtractor",
+    // },
   ];
 
   const TransformItems = [
@@ -377,7 +377,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium">FLYGOD</span>
+            <span className="text-sm font-medium">UserX</span>
             <Button variant="ghost" size="sm">
               Log out
             </Button>

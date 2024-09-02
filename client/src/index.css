@@ -76,10 +76,10 @@
   }
   
   .dndflow .dndnode {
-    height: 20px;
-    padding: 4px;
+    height: 16px;
+    padding: 3px;
     border: 1px solid #1a192b;
-    border-radius: 2px;
+    border-radius: 10px;
     margin-bottom: 10px;
     display: flex;
     justify-content: center;
@@ -104,14 +104,26 @@
     margin-top: 10px;
   }
   
+  .dndnode .connecting {
+    border: 2px solid #3498db;
+    box-shadow: 0 0 10px #3498db;
+  }
+  /* .connecting {
+    box-shadow: 0px 0px 10px #ff0071;
+  } */
+  .connecting {
+    box-shadow: 0px 0px 10px #7cfc00;
+  }
   .edgebutton {
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
+    color: red;
     background: #eee;
-    border: 1px solid #fff;
+    border: 1px solid #111;
     cursor: pointer;
     border-radius: 50%;
     font-size: 12px;
+    font-weight: bold;
     line-height: 1;
   }
   

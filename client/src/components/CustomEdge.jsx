@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -20,6 +20,7 @@ const CustomEdge = ({
   markerEnd,
 }) => {
   const { setEdges } = useReactFlow();
+  const [isRed, setIsRed] = useState(false);
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -30,12 +31,16 @@ const CustomEdge = ({
   });
 
   const onEdgeClick = () => {
-    setEdges((edges) => edges.filter((edge) => edge.id !== id));
+    if (isRed) {
+      setEdges((edges) => edges.filter((edge) => edge.id !== id));
+    } else {
+      setIsRed(true);
+    }
   };
 
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={{ ...style, stroke: isRed ? 'red' : 'black' }} />
       <EdgeLabelRenderer>
         <div
           style={{
