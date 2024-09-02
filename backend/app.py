@@ -13,9 +13,69 @@ import pandasql as psql
 import tempfile
 import uuid
 
+# from flask_sqlalchemy import SQLAlchemy
+# from flask_bcrypt import Bcrypt
+# from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+
 load_dotenv()
 app = Flask(__name__)
+# app.config['SQLALCHEMY_DATABASE_URI'] = os
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# app.config['SECRET_KEY'] = 'your_secret_key'
+# app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'
+
+# db = SQLAlchemy(app)
+# bcrypt = Bcrypt(app)
+# jwt = JWTManager(app)
+
+
+
 CORS(app)
+
+
+# class User(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     username = db.Column(db.String(150), unique=True, nullable=False)
+#     email = db.Column(db.String(150), unique=True, nullable=False)
+#     password = db.Column(db.String(256), nullable=False)
+
+#     def __repr__(self):
+#         return f"<User {self.username}>"
+    
+    
+# Create the database tables
+# with app.app_context():
+#     db.create_all()
+    
+    
+    
+# @app.route('/signup', methods=['POST'])
+# def signup():
+#     data = request.get_json()
+
+#     if User.query.filter_by(email=data['email']).first():
+#         return jsonify({"message": "Email already registered"}), 400
+
+#     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+#     new_user = User(username=data['name'], email=data['email'], password=hashed_password)
+
+#     db.session.add(new_user)
+#     db.session.commit()
+
+#     return jsonify({"message": "User created successfully"}), 201
+
+
+# @app.route('/login', methods=['POST'])
+# def login():
+#     data = request.get_json()
+
+#     user = User.query.filter_by(email=data['email']).first()
+#     if user and bcrypt.check_password_hash(user.password, data['password']):
+#         access_token = create_access_token(identity=user.id)
+#         return jsonify(access_token=access_token), 200
+
+#     return jsonify({"message": "Invalid email or password"}), 401
+
 
 # @app.route('/localextract', methods=['POST'])
 # def local_extract():

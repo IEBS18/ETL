@@ -173,8 +173,9 @@ function LoadNode({ id, data, isConnectable }) {
             </button>
             <div className='text-[10px] flex flex-col p-2'>
                 <div>
-                    <p className='text-[10px]'><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
-                    <p className='text-[10px]'><strong>File Path:</strong> {data.filePath || 'N/A'}</p>
+                    {/* <p className='text-[10px]'><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
+                    <p className='text-[10px]'><strong>File Path:</strong> {data.filePath || 'N/A'}</p> */}
+                    <p className="text-[10px] text-center font-bold text-black">Click on Download to get the Transformed File.</p>
                 </div>
                 <button
                     className="bg-black text-white p-1 w-auto self-center mt-2 text-[10px]"

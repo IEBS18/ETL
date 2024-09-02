@@ -3,7 +3,11 @@ boto3
 botocore           
 click              
 colorama           
-Flask              
+Flask
+SQLAlchemy 
+psycopg2-binary 
+Flask-Bcrypt 
+Flask-JWT-Extended              
 importlib_metadata 
 itsdangerous       
 Jinja2             
@@ -32,3 +36,4 @@ pandasql
 typing-extensions
 greenlet
 sqlalchemy
+flask-sqlalchemy
