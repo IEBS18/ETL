@@ -142,7 +142,7 @@ const bottomItems = [
 export default function Sidebar({ isOpen }) {
   return (
     <div
-      className={`flex flex-col justify-between h-screen bg-white text-black transition-all duration-300 ${
+      className={`flex flex-col justify-between h-screen bg-gradient-to-t from-green-400 to-blue-700 text-black transition-all duration-300 ${
         isOpen ? "w-[50px] flex" : "hidden"
       } fixed top-0 left-0 z-50`}
     >

@@ -101,7 +101,7 @@ function LocalExtractNode({ id, data, isConnectable }) {
         &times;
       </button>
       <div className='text-[10px] flex flex-col p-2'>
-        <label htmlFor="file">Upload File</label>
+        <label htmlFor="file" className="text-[10px] text-center font-bold text-black">Upload File</label>
         <input
           id="file"
           name="file"

@@ -234,7 +234,7 @@ import { useDnD } from "./DnDContext";
 
 export default function Component({ nodes, edges, setNodes, setEdges }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true); // State to toggle sidebar
-  const [flowName, setFlowName] = useState("Untitled Pipeline");
+  const [flowName, setFlowName] = useState("");
   const [savedFlows, setSavedFlows] = useState([]);
   const [_, setType] = useDnD();
 
@@ -322,7 +322,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
           width: isSidebarOpen ? "calc(100% - 50px)" : "calc(100% - 0px)",
         }}
       >
-        <header className="flex items-center justify-between p-4 border-b">
+        <header className="flex items-center justify-between p-4 bg-white border-b">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               {isSidebarOpen ? (
@@ -332,11 +332,13 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
               )}
             </Button>
             <div className="flex items-center space-x-2">
+              <span className="text-lg tracking-widest text-blue-600 font-extrabold mr-20">MineX</span>
               <span className="text-sm font-medium">Pipelines</span>
               <span className="text-sm text-muted-foreground">&gt;</span>
               <Input
                 className="h-8 w-40"
                 value={flowName}
+                placeholder="Untitled Pipeline" 
                 onChange={(e) => setFlowName(e.target.value)}
               />
             </div>
@@ -351,7 +353,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
                     size="sm"
                     className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
                   >
-                    Load Saved Pipelines
+                    Existing Pipelines
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
@@ -377,19 +379,19 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
             )}
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium">UserX</span>
+            <span className="text-sm font-medium">Welcome! IEBS1</span>
             <Button variant="ghost" size="sm">
               Log out
             </Button>
           </div>
         </header>
-        <Tabs defaultValue="extract" className="">
-          <TabsList className="bg-background border-b px-4">
+        <Tabs defaultValue="extract" className="bg-white border-b">
+          <TabsList className="bg-transparent px-4">
             <TabsTrigger value="extract">Extract</TabsTrigger>
             <TabsTrigger value="transform">Transform</TabsTrigger>
             <TabsTrigger value="load">Load</TabsTrigger>
           </TabsList>
-          <TabsContent value="transform" className="p-4 bg-gray-50">
+          <TabsContent value="transform" className="p-4 ">
             <div className="flex space-x-2">
               {TransformItems.map((item) => (
                 <Button
@@ -405,7 +407,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
               ))}
             </div>
           </TabsContent>
-          <TabsContent value="load" className="p-4 bg-gray-50">
+          <TabsContent value="load" className="p-4">
             <div className="flex space-x-2">
               {LoadItems.map((item) => (
                 <Button
@@ -421,7 +423,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
               ))}
             </div>
           </TabsContent>
-          <TabsContent value="extract" className="p-4 bg-gray-50">
+          <TabsContent value="extract" className="p-4">
             <div className="flex space-x-2">
               {generalItems.map((item) => (
                 <Button
