@@ -8,6 +8,7 @@ import SignUp from './components/SignUp.jsx'
 import Ui from './components/Ui.jsx'
 import AwsPopUp from './pages/AwsPopUp.jsx'
 import SqlPopUp from './pages/SqlPopUp.jsx'
+import { Dashboard } from './components/Dashboard.jsx'
 
 const router = createBrowserRouter([
   {
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
   {
     path: '/sql',
     element: <SqlPopUp/>
+  },
+  {
+    path: '/visualization',
+    element: <Dashboard/>
   },
 ])
 

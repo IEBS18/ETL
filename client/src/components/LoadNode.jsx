@@ -122,6 +122,7 @@ function LoadNode({ id, data, isConnectable }) {
         const payload = {
             output_path: data.filePath,
         };
+        console.log(data.filePath);
 
         try {
             const response = await fetch('http://localhost:5000/downloadfroms3', {

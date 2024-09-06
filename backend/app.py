@@ -293,7 +293,8 @@ def run_sql_on_s3_csv():
     
 @app.route('/downloadfroms3', methods=['POST'])
 def download_from_s3():
-    s3_path = request.json.get('output_path')  # e.g., s3://bucket-name/file.csv
+    s3_path = request.json.get('output_path')
+    print(s3_path)# e.g., s3://bucket-name/file.csv
     if not s3_path:
         return jsonify({"error": "No path provided"}), 400
     

@@ -229,6 +229,7 @@ import mysql from "../assets/export/mysql.png";
 import file from "../assets/export/file.png";
 import script from "../assets/transform/script.png";
 import download from "../assets/load/download.png";
+import logo from "../assets/MineX.png"
 
 import { useDnD } from "./DnDContext";
 
@@ -249,11 +250,11 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       icon: <img src={awsS3} alt="sql" className="h-4 w-4" />,
       type: "AWSExtractor",
     },
-    // {
-    //   name: "SQL Server",
-    //   icon: <img src={mysql} alt="awsS3" className="h-4 w-4" />,
-    //   type: "SQLExtractor",
-    // },
+    {
+      name: "SQL Server",
+      icon: <img src={mysql} alt="awsS3" className="h-4 w-4" />,
+      type: "SQLExtractor",
+    },
   ];
 
   const TransformItems = [
@@ -318,7 +319,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       <div
         className="flex flex-col bg-background transition-all duration-300"
         style={{
-          marginLeft: isSidebarOpen ? "50px" : "0px",
+          marginLeft: isSidebarOpen ? "240px" : "0px",
           width: isSidebarOpen ? "calc(100% - 50px)" : "calc(100% - 0px)",
         }}
       >
@@ -332,7 +333,8 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
               )}
             </Button>
             <div className="flex items-center space-x-2">
-              <span className="text-lg tracking-widest text-blue-600 font-extrabold mr-20">MineX</span>
+              {/* <span className="text-lg tracking-widest text-blue-600 font-extrabold mr-20">MineX</span> */}
+              <img src={logo} className="w-24 h-8"/>
               <span className="text-sm font-medium">Pipelines</span>
               <span className="text-sm text-muted-foreground">&gt;</span>
               <Input
@@ -387,7 +389,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
         </header>
         <Tabs defaultValue="extract" className="bg-white border-b">
           <TabsList className="bg-transparent px-4">
-            <TabsTrigger value="extract">Extract</TabsTrigger>
+            <TabsTrigger value="extract">Data Source</TabsTrigger>
             <TabsTrigger value="transform">Transform</TabsTrigger>
             <TabsTrigger value="load">Load</TabsTrigger>
           </TabsList>
