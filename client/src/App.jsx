@@ -206,6 +206,7 @@ import {
   useReactFlow,
   MiniMap,
   Background,
+  BackgroundVariant
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { DnDProvider, useDnD } from './components/DnDContext';
@@ -294,7 +295,7 @@ const DnDFlow = () => {
       );
     }
 
-    setEdges((eds) => addEdge({ ...params, type: 'custom' }, eds));
+    setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, deletable: true }, eds));
 
     onConnectEnd(); // Reset the connecting state after connecting
   };
@@ -352,7 +353,7 @@ const DnDFlow = () => {
         >
           <Controls position='top-right'/>
           <MiniMap />
-          <Background variant="dots" gap={12} size={1}/>
+          <Background variant={BackgroundVariant.Lines} gap={12} size={1}/>
         </ReactFlow>
       </div>
     </div>
