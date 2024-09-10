@@ -17,7 +17,7 @@ import { DnDProvider, useDnD } from './components/DnDContext';
 import './index.css';
 import Component from './components/Ui';
 
-import LocalExtractNode from './components/LocalExtractNode';
+// import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from './components/AWSExtractNode';
 import SQLExtractNode from './components/SQLExtractNode';
 import SQLQueryNode from './components/SQLQueryNode';
@@ -29,7 +29,7 @@ const edgeTypes = {
   custom: CustomEdge,
 };
 const nodeTypes = { 
-  LocalExtractor: LocalExtractNode, 
+  // LocalExtractor: LocalExtractNode, 
   AWSExtractor: AWSExtractNode, 
   // SQLExtractor: SQLExtractNode, 
   SQLQuery: SQLQueryNode, 

@@ -286,22 +286,36 @@ def local_extract_sheet_to_s3():
 
     # Handle JSON files
     elif file.filename.endswith('.json'):
-        # Load JSON and convert to DataFrame
-        data = json.load(file)
-        df = pd.json_normalize(data)  # Flatten nested JSON if necessary
+        try:
+            # Attempt to load the JSON data
+            file_content = file.read().decode('utf-8')  # Read and decode the file
 
-        # Convert DataFrame to CSV in memory
-        output = BytesIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+            # Check if the file contains multiple JSON objects (each on a new line)
+            if file_content.strip().startswith('['):
+                # If it's a valid JSON array, we can directly load it
+                data = json.loads(file_content)
+            else:
+                # If it's multiple JSON objects, we split the lines and load each object individually
+                data = [json.loads(line) for line in file_content.strip().splitlines()]
 
-        # Upload the CSV file to S3
-        s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
-        s3.upload_fileobj(output, bucket_name, s3_key)
+            # Convert JSON to DataFrame
+            df = pd.json_normalize(data)  # Flatten nested JSON if necessary
 
-        # Generate the S3 file URL
-        s3_url = f"s3://{bucket_name}/{s3_key}"
-        return jsonify({'s3_path': s3_url})
+            # Convert DataFrame to CSV in memory
+            output = BytesIO()
+            df.to_csv(output, index=False)
+            output.seek(0)
+
+            # Upload the CSV file to S3
+            s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
+            s3.upload_fileobj(output, bucket_name, s3_key)
+
+            # Generate the S3 file URL
+            s3_url = f"s3://{bucket_name}/{s3_key}"
+            return jsonify({'s3_path': s3_url})
+
+        except json.JSONDecodeError as e:
+            return jsonify({'error': f'Failed to parse JSON file: {str(e)}'}), 400
 
     # Handle XML files
     elif file.filename.endswith('.xml'):
