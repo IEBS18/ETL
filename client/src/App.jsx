@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,22 +16,21 @@ import { DnDProvider, useDnD } from './components/DnDContext';
 
 import './index.css';
 import Component from './components/Ui';
-
 import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from './components/AWSExtractNode';
-import SQLExtractNode from './components/SQLExtractNode';
 import SQLQueryNode from './components/SQLQueryNode';
 import CustomEdge from './components/CustomEdge';
 import LoadNode from './components/LoadNode';
 import {CSVExtractNode, JSONExtractNode, XLSXExtractNode, XMLExtractNode} from './components/FileType';
+import DraggableTable from './components/DraggableTable';
 
 const edgeTypes = {
   custom: CustomEdge,
 };
+
 const nodeTypes = { 
   LocalExtractor: LocalExtractNode, 
   AWSExtractor: AWSExtractNode, 
-  // SQLExtractor: SQLExtractNode, 
   SQLQuery: SQLQueryNode, 
   FileLoad: LoadNode,
   CSVExtract: CSVExtractNode,
@@ -49,6 +48,8 @@ const DnDFlow = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { screenToFlowPosition } = useReactFlow();
   const [type] = useDnD();
+
+  const [tableData, setTableData] = useState(null);
 
   const onConnectStart = (event, params) => {
     setNodes((nds) =>
@@ -128,12 +129,12 @@ const DnDFlow = () => {
         id: getId(),
         type,
         position,
-        data: { label: `${type} node`, setNodes, nodes },
+        data: { label: `${type} node`, setNodes, nodes, setTableData },
       };
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, type, nodes, setNodes],
+    [screenToFlowPosition, type, nodes, setNodes, setTableData],
   );
 
   return (
@@ -144,7 +145,7 @@ const DnDFlow = () => {
         setNodes={setNodes}
         setEdges={setEdges}
       />
-      <div className="reactflow-wrapper" style={{ width: '100vw', height: '71vh' }} ref={reactFlowWrapper}>
+      <div className="reactflow-wrapper" style={{ width: '100%', height: '71vh' }} ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -164,16 +165,15 @@ const DnDFlow = () => {
           <Background variant={BackgroundVariant.Lines} gap={12} size={1}/>
         </ReactFlow>
       </div>
+      <DraggableTable data={tableData} />
     </div>
   );
 };
 
 export default () => (
-  <div >
-    <ReactFlowProvider>
-      <DnDProvider>
-        <DnDFlow />
-      </DnDProvider>
-    </ReactFlowProvider>
-  </div>
+  <ReactFlowProvider>
+    <DnDProvider>
+      <DnDFlow />
+    </DnDProvider>
+  </ReactFlowProvider>
 );
