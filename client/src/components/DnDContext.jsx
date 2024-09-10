@@ -4,8 +4,10 @@ const DnDContext = createContext([null, (_) => {}]);
 
 export const DnDProvider = ({ children }) => {
   const [type, setType] = useState(null);
+  // const [fileType, setFileType] = useState(null);
 
   return (
+    // <DnDContext.Provider value={[type, setType, fileType]}>
     <DnDContext.Provider value={[type, setType]}>
       {children}
     </DnDContext.Provider>

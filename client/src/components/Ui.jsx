@@ -229,6 +229,13 @@ import mysql from "../assets/export/mysql.png";
 import file from "../assets/export/file.png";
 import script from "../assets/transform/script.png";
 import download from "../assets/load/download.png";
+import mongodb from "../assets/export/mongodb.png";
+import csv from "../assets/export/csv.png";
+import json from "../assets/export/json.png";
+import postgresql from "../assets/export/postgresql.png";
+import xlxs from "../assets/export/xlxs.png";
+import xml from "../assets/export/xml.png";
+import mssql from "../assets/export/mssql.png";
 import logo from "../assets/MineX.png"
 
 import { useDnD } from "./DnDContext";
@@ -253,6 +260,45 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
     {
       name: "SQL Server",
       icon: <img src={mysql} alt="awsS3" className="h-4 w-4" />,
+      type: "SQLExtractor",
+    },
+    {
+      name: "CSV",
+      icon: <img src={csv} alt="csv" className="h-4 w-4" />,
+      type: "CSVExtract",
+      fileType: 'csv',
+    },
+    {
+      name: "XLXS",
+      icon: <img src={xlxs} alt="xlxs" className="h-4 w-4" />,
+      type: "XLXSExtract",
+      fileType: 'xlxs',
+    },
+    {
+      name: "JSON",
+      icon: <img src={json} alt="json" className="h-4 w-4" />,
+      type: "JSONExtract",
+      fileType: 'json',
+    },
+    {
+      name: "XML",
+      icon: <img src={xml} alt="xml" className="h-4 w-4" />,
+      type: "XMLExtract",
+      fileType: 'xml',
+    },
+    {
+      name: "MongoDB",
+      icon: <img src={mongodb} alt="mongodb" className="h-4 w-4" />,
+      type: "LocalExtractor",
+    },
+    {
+      name: "MS SQL",
+      icon: <img src={mssql} alt="mssql" className="h-4 w-4" />,
+      type: "LocalExtractor",
+    },
+    {
+      name: "PostgreSQL",
+      icon: <img src={postgresql} alt="postgresql" className="h-4 w-4" />,
       type: "SQLExtractor",
     },
   ];
@@ -287,7 +333,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
     const updatedFlows = [...savedFlows, currentFlow];
     setSavedFlows(updatedFlows);
     localStorage.setItem("savedFlows", JSON.stringify(updatedFlows));
-    alert(`Flow "${flowName}" saved successfully!`);
+    alert(`Pipeline "${flowName}" saved successfully!`);
   };
 
   const handleRestoreFlow = (selectedFlow) => {
@@ -301,7 +347,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
     }));
     setNodes(restoredNodes);
     setEdges(selectedFlow.edges || []);
-    alert(`Flow "${selectedFlow.name}" restored!`);
+    alert(`Pipeline "${selectedFlow.name}" restored!`);
   };
 
   const onDragStart = (event, nodeType) => {
@@ -432,6 +478,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
                   key={item.name}
                   variant="outline"
                   className="h-10 px-3 py-2"
+                  // onDragStart={(event) => onDragStart(event, item.type, item.fileType)}
                   onDragStart={(event) => onDragStart(event, item.type)}
                   draggable
                 >

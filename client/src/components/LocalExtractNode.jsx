@@ -3,7 +3,7 @@ import { Handle, Position, useReactFlow } from '@xyflow/react';
 import '../index.css';
 import { memo } from 'react';
 
-function LocalExtractNode({ id, data, isConnectable }) {
+function LocalExtractNode({ id, data, isConnectable, type }) {
   const [status, setStatus] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [sheetName, setSheetName] = useState(null);
@@ -88,7 +88,7 @@ function LocalExtractNode({ id, data, isConnectable }) {
   return (
     <div className={`relative p-1 dndnode ${data.isConnecting ? 'connecting' : ''}`} 
       style={{
-        borderRadius: '10px', 
+        borderRadius: '5px', 
         border: `2px solid ${data.isConnecting ? '#7cfc00' : '#1a192b'}`,
         width: '150px', 
         height: 'auto', 
@@ -96,12 +96,12 @@ function LocalExtractNode({ id, data, isConnectable }) {
       }}>
       <button
         onClick={handleDelete}
-        className="absolute top-0 right-0 p-1 text-red-500"
+        className="absolute top-0 right-0 p-1 text-red-500 text-sm"
       >
         &times;
       </button>
       <div className='text-[10px] flex flex-col p-2'>
-        <label htmlFor="file" className="text-[10px] text-center font-bold text-black">Upload File</label>
+        <label htmlFor="file" className="text-[10px] text-center font-bold text-black/80">Upload File</label>
         <input
           id="file"
           name="file"
@@ -178,3 +178,4 @@ function LocalExtractNode({ id, data, isConnectable }) {
 }
 
 export default memo(LocalExtractNode);
+
