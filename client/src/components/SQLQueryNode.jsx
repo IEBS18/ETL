@@ -7,6 +7,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
   const [filePaths, setFilePaths] = useState(data.filePaths || []); // Initial filePaths from the node data
 
   // Collect file paths from data whenever it changes (to handle updates from other connected nodes)
@@ -49,6 +50,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
       });
 
       const data = await response.json();
+      console.log(data);
       if (response.ok && data.output_path) {
         // Update the node with the new file path from the SQL transformation
         setNodes((nds) =>
@@ -56,13 +58,15 @@ function SQLQueryNode({ id, data, isConnectable }) {
             node.id === id ? { ...node, data: { ...node.data, filePath: data.output_path } } : node
           )
         );
+        setError("");
         setStatus("SQL Query Executed, connect to Load.");
       } else {
         throw new Error("SQL execution failed.");
       }
     } catch (error) {
       console.error(error);
-      setStatus("Failed to execute SQL query.");
+      setStatus("");
+      setError("Failed to execute SQL query.");
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +78,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
       style={{
         borderRadius: '5px', 
         border: `2px solid ${data.isConnecting ? '#7cfc00' : '#1a192b'}`,
-        width: '150px', 
+        width: '200px', 
         height: 'auto', 
         fontSize: '10px'
       }}
@@ -105,7 +109,11 @@ function SQLQueryNode({ id, data, isConnectable }) {
         >
           {isLoading ? 'Transforming...' : 'Transform'}
         </button>
-        <p className='text-[5px] text-center font-bold text-green-500'>{status}</p>
+        {error ? (
+          <p className="mt-1 text-[6px] text-center font-bold text-red-500">{error}</p>
+        ) : (
+          status && <p className="mt-1 text-[6px] text-center font-bold text-green-500">{status}</p>
+        )}
       </div>
       <Handle
         type="source"
