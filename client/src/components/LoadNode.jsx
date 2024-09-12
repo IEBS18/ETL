@@ -102,38 +102,44 @@
 
 // export default memo(LoadNode);
 
-
 import { useCallback, useState, memo } from 'react';
-import { Handle, Position, useHandleConnections, useNodesData, useReactFlow } from '@xyflow/react';
+import { Handle, useReactFlow } from '@xyflow/react';
 import '../index.css';
 
 function LoadNode({ id, data, isConnectable }) {
     const { setNodes } = useReactFlow();
-    const connections = useHandleConnections({
-        type: 'target',
-    });
-
+    const [status, setStatus] = useState('');
+    const [error, setError] = useState('');
 
     const handleDelete = () => {
         setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
     };
 
     const handleLoad = async () => {
+        if (!data.filePath) {
+            setError("File path not available. Please ensure the source node is connected.");
+            return;
+        }
+
         const payload = {
             output_path: data.filePath,
         };
-        console.log(data.filePath);
+
+        setStatus("Downloading...");
+        setError(""); // Reset any previous errors
 
         try {
             const response = await fetch('http://localhost:5000/downloadfroms3', {
                 method: 'POST',
                 headers: {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
             });
+
+            if (!response.ok) {
+                throw new Error(`Failed to download file: ${response.statusText}`);
+            }
 
             const blob = await response.blob();
 
@@ -148,19 +154,21 @@ function LoadNode({ id, data, isConnectable }) {
             // Clean up
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
+
+            setStatus("Download successful!");
         } catch (error) {
             console.error(error);
+            setError(`Error: ${error.message}`);
+            setStatus("Download failed.");
         }
     };
-
 
     return (
         <div
             className={`relative p-1 dndnode ${data.isConnecting ? 'connecting' : ''}`} 
             style={{
-                borderRadius: '10px', 
-        // border: `2px solid ${data.isConnecting ? '#ff0071' : '#1a192b'}`,
-        border: `2px solid ${data.isConnecting ? '#7cfc00' : '#1a192b'}`, 
+                borderRadius: '5px', 
+                border: `2px solid ${data.isConnecting ? '#7cfc00' : '#1a192b'}`, 
                 width: '150px', 
                 height: 'auto', 
                 fontSize: '10px'
@@ -174,8 +182,6 @@ function LoadNode({ id, data, isConnectable }) {
             </button>
             <div className='text-[10px] flex flex-col p-2'>
                 <div>
-                    {/* <p className='text-[10px]'><strong>Source ID:</strong> {data.sourceId || 'N/A'}</p>
-                    <p className='text-[10px]'><strong>File Path:</strong> {data.filePath || 'N/A'}</p> */}
                     <p className="text-[10px] text-center font-bold text-black">Click on Download to get the Transformed File.</p>
                 </div>
                 <button
@@ -184,10 +190,12 @@ function LoadNode({ id, data, isConnectable }) {
                 >
                     Download
                 </button>
+                {status && <p className="text-green-500 text-center text-[8px] mt-2">{status}</p>}
+                {error && <p className="text-red-500 text-center text-[8px] mt-2">{error}</p>}
             </div>
             <Handle
                 type="target"
-                position={Position.Left}
+                position="left"
                 id="b"
                 isConnectable={isConnectable}
                 style={{ left: '-4px', top: '50%', transform: 'translateY(-50%)' }}

@@ -302,159 +302,263 @@ def local_extract():
 #         return jsonify({
 #             'error': 'Unsupported file type or missing sheet name.'
 #         }), 400
+
+# @app.route('/localextractsheet', methods=['POST'])
+# def local_extract_sheet_to_s3():
+#     try:
+#         file = request.files['file']
+#         sheet_name = request.form.get('sheetName', None)  # Get sheetName only for XLSX files
+#         bucket_name = os.environ['bucket_name']
+
+#         # Initialize the S3 client
+#         s3 = boto3.client(
+#             's3',
+#             region_name=os.environ["region_name"],
+#             aws_access_key_id=os.environ["aws_access_key_id"],
+#             aws_secret_access_key=os.environ["aws_secret_access_key"]
+#         )
+
+#         if file.filename.endswith('.xlsx') and sheet_name:
+#             # XLSX with a valid sheet name
+#             workbook_name = file.filename.rsplit('.', 1)[0]
+#             workbook = pd.ExcelFile(file)
+#             df = pd.read_excel(workbook, sheet_name=sheet_name)
+
+#             output = BytesIO()
+#             df.to_csv(output, index=False)
+#             output.seek(0)
+
+#             s3_key = f"DataAnalysis/Input/{workbook_name}_{sheet_name}.csv"
+#             s3.upload_fileobj(output, bucket_name, s3_key)
+#             s3_url = f"s3://{bucket_name}/{s3_key}"
+
+#             return jsonify({'s3_path': s3_url}), 200
+
+#         elif file.filename.endswith('.csv'):
+#             output = BytesIO()
+#             file.save(output)
+#             output.seek(0)
+
+#             # Save the CSV content to a new BytesIO object to read it again
+#             csv_content = output.getvalue()
+#             output = BytesIO(csv_content)
+#             output.seek(0)
+
+#             # Upload the CSV file to S3
+#             s3_key = f"DataAnalysis/Input/{file.filename}"
+#             s3.upload_fileobj(output, bucket_name, s3_key)
+
+#             # Read the CSV file to get columns and rows
+#             df = pd.read_csv(BytesIO(csv_content))  # Reload CSV into a DataFrame
+
+#             # Generate the S3 file URL
+#             s3_url = f"s3://{bucket_name}/{s3_key}"
+
+#             # Extract columns and rows to return as part of the response
+#             columns = df.columns.tolist()  # List of column names
+#             rows = df.values.tolist()      # List of rows as lists
+
+#             return jsonify({
+#                 's3_path': s3_url,
+#                 'columns': columns,
+#                 'rows': rows
+#             }), 200
+
+#         elif file.filename.endswith('.json'):
+#             try:
+#                 # Attempt to load the JSON data
+#                 file_content = file.read().decode('utf-8')  # Read and decode the file
+
+#                 # Check if the file contains multiple JSON objects (each on a new line)
+#                 if file_content.strip().startswith('['):
+#                     # If it's a valid JSON array, we can directly load it
+#                     data = json.loads(file_content)
+#                 else:
+#                     # If it's multiple JSON objects, we split the lines and load each object individually
+#                     data = [json.loads(line) for line in file_content.strip().splitlines()]
+
+#                 # Convert JSON to DataFrame
+#                 df = pd.json_normalize(data)  # Flatten nested JSON if necessary
+
+#                 # Convert DataFrame to CSV in memory
+#                 output = BytesIO()
+#                 df.to_csv(output, index=False)
+#                 output.seek(0)
+
+#                 # Upload the CSV file to S3
+#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
+#                 s3.upload_fileobj(output, bucket_name, s3_key)
+
+#                 # Generate the S3 file URL
+#                 s3_url = f"s3://{bucket_name}/{s3_key}"
+#                 return jsonify({'s3_path': s3_url}), 200
+
+#             except json.JSONDecodeError as e:
+#                 return jsonify({'error': f'Failed to parse JSON file: {str(e)}'}), 400
+
+#         elif file.filename.endswith('.xml'):
+#             # Parse XML file and convert to DataFrame
+#             tree = ET.parse(file)
+#             root = tree.getroot()
+
+#             # Convert XML to list of dictionaries (each dict is a row)
+#             data = []
+#             for child in root:
+#                 row = {elem.tag: elem.text for elem in child}
+#                 data.append(row)
+
+#             # Convert list of dictionaries to DataFrame
+#             df = pd.DataFrame(data)
+
+#             # Convert DataFrame to CSV in memory
+#             output = BytesIO()
+#             df.to_csv(output, index=False)
+#             output.seek(0)
+
+#             # Upload the CSV file to S3
+#             s3_key = f"DataAnalysis/Input/{file.filename.replace('.xml', '.csv')}"
+#             s3.upload_fileobj(output, bucket_name, s3_key)
+
+#             # Generate the S3 file URL
+#             s3_url = f"s3://{bucket_name}/{s3_key}"
+#             return jsonify({'s3_path': s3_url}), 200
+
+#         else:
+#             return jsonify({'error': 'Unsupported file type.'}), 400
+
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
+
+
+
 @app.route('/localextractsheet', methods=['POST'])
 def local_extract_sheet_to_s3():
-    file = request.files['file']
-    sheet_name = request.form['sheetName']
-    bucket_name = os.environ['bucket_name']  # Get the S3 bucket name from the environment variable
+    try:
+        # Get file and optional sheet name
+        file = request.files.get('file')
+        sheet_name = request.form.get('sheetName')  # Optional, for XLSX files
 
-    # Initialize the S3 client
-    s3 = boto3.client(
-        's3',
-        region_name=os.environ["region_name"],
-        aws_access_key_id=os.environ["aws_access_key_id"],
-        aws_secret_access_key=os.environ["aws_secret_access_key"]
-    )
+        if not file:
+            return jsonify({'error': 'No file provided'}), 400
 
-    # Handle XLSX files with sheet selection
-    if file.filename.endswith('.xlsx') and sheet_name:
-        # Read the specific sheet into a DataFrame
-        workbook = pd.ExcelFile(file)
-        df = pd.read_excel(workbook, sheet_name=sheet_name)
+        bucket_name = os.environ['bucket_name']
 
-        # Convert DataFrame to CSV in memory
-        output = BytesIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
-
-        # Upload the CSV file to S3
-        s3_key = f"DataAnalysis/Input/{sheet_name}.csv"
-        s3.upload_fileobj(output, bucket_name, s3_key)
-
-        # Generate the S3 file URL
-        s3_url = f"s3://{bucket_name}/{s3_key}"
-
-        # Extract columns and rows to return as part of the response
-        columns = df.columns.tolist()  # List of column names
-        rows = df.values.tolist()      # List of rows as lists
-
-        return jsonify({
-            's3_path': s3_url,
-            'columns': columns,
-            'rows': rows
-        })
-
-    elif file.filename.endswith('.csv'):
-        output = BytesIO()
-        file.save(output)
-        output.seek(0)
-
-        # Save the CSV content to a new BytesIO object to read it again
-        csv_content = output.getvalue()
-        output = BytesIO(csv_content)
-        output.seek(0)
-
-        # Initialize the S3 client
+        # Initialize S3 client
         s3 = boto3.client(
             's3',
-            region_name=os.environ["region_name"],
-            aws_access_key_id=os.environ["aws_access_key_id"],
-            aws_secret_access_key=os.environ["aws_secret_access_key"]
+            region_name=os.environ['region_name'],
+            aws_access_key_id=os.environ['aws_access_key_id'],
+            aws_secret_access_key=os.environ['aws_secret_access_key']
         )
 
-        # Upload the CSV file to S3
-        s3_key = f"DataAnalysis/Input/{file.filename}"
-        s3.upload_fileobj(output, bucket_name, s3_key)
+        # Handle XLSX files with sheet selection
+        if file.filename.endswith('.xlsx') and sheet_name:
+            try:
+                workbook = pd.ExcelFile(file)
+                df = pd.read_excel(workbook, sheet_name=sheet_name)
 
-        # Read the CSV file to get columns and rows
-        df = pd.read_csv(BytesIO(csv_content))  # Reload CSV into a DataFrame
+                # Convert DataFrame to CSV in memory
+                output = BytesIO()
+                df.to_csv(output, index=False)
+                output.seek(0)
 
-        # Generate the S3 file URL
-        s3_url = f"s3://{bucket_name}/{s3_key}"
+                # Upload to S3
+                s3_key = f"DataAnalysis/Input/{file.filename.replace('.xlsx', f'_{sheet_name}.csv')}"
+                s3.upload_fileobj(output, bucket_name, s3_key)
+                s3_url = f"s3://{bucket_name}/{s3_key}"
 
-        # Extract columns and rows to return as part of the response
-        columns = df.columns.tolist()  # List of column names
-        rows = df.values.tolist()      # List of rows as lists
+                return jsonify({'s3_path': s3_url}), 200
 
-        return jsonify({
-            's3_path': s3_url,
-            'columns': columns,
-            'rows': rows
-        })
-        return jsonify({'s3_path': s3_url})
+            except Exception as e:
+                return jsonify({'error': f"Failed to process XLSX file: {str(e)}"}), 500
 
-    # Handle JSON files
-    elif file.filename.endswith('.json'):
-        # Load JSON and convert to DataFrame
-        data = json.load(file)
-        df = pd.json_normalize(data)  # Flatten nested JSON if necessary
+        # Handle CSV files
+        elif file.filename.endswith('.csv'):
+            try:
+                output = BytesIO()
+                file.save(output)
+                output.seek(0)
 
-        # Convert DataFrame to CSV in memory
-        output = BytesIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+                # Save CSV content to S3
+                s3_key = f"DataAnalysis/Input/{file.filename}"
+                s3.upload_fileobj(output, bucket_name, s3_key)
+                s3_url = f"s3://{bucket_name}/{s3_key}"
 
-        # Upload the CSV file to S3
-        s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
-        s3.upload_fileobj(output, bucket_name, s3_key)
+                return jsonify({'s3_path': s3_url}), 200
 
-        # Generate the S3 file URL
-        s3_url = f"s3://{bucket_name}/{s3_key}"
-        return jsonify({'s3_path': s3_url})
+            except Exception as e:
+                return jsonify({'error': f"Failed to process CSV file: {str(e)}"}), 500
 
-    # Handle XML files
-    elif file.filename.endswith('.xml'):
-        # Parse XML file and convert to DataFrame
-        tree = ET.parse(file)
-        root = tree.getroot()
+        # Handle JSON files
+        elif file.filename.endswith('.json'):
+            try:
+                file_content = file.read().decode('utf-8')
+                if file_content.strip().startswith('['):
+                    data = json.loads(file_content)
+                else:
+                    data = [json.loads(line) for line in file_content.strip().splitlines()]
 
-        # Convert XML to list of dictionaries (each dict is a row)
-        data = []
-        for child in root:
-            row = {elem.tag: elem.text for elem in child}
-            data.append(row)
+                # Convert JSON to DataFrame
+                df = pd.json_normalize(data)
+                output = BytesIO()
+                df.to_csv(output, index=False)
+                output.seek(0)
 
-        # Convert list of dictionaries to DataFrame
-        df = pd.DataFrame(data)
+                # Upload to S3
+                s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
+                s3.upload_fileobj(output, bucket_name, s3_key)
+                s3_url = f"s3://{bucket_name}/{s3_key}"
 
-        # Convert DataFrame to CSV in memory
-        output = BytesIO()
-        df.to_csv(output, index=False)
-        output.seek(0)
+                return jsonify({'s3_path': s3_url}), 200
 
-        # Upload the CSV file to S3
-        s3_key = f"DataAnalysis/Input/{file.filename.replace('.xml', '.csv')}"
-        s3.upload_fileobj(output, bucket_name, s3_key)
+            except json.JSONDecodeError as e:
+                return jsonify({'error': f"Invalid JSON format: {str(e)}"}), 400
+            except Exception as e:
+                return jsonify({'error': f"Failed to process JSON file: {str(e)}"}), 500
 
-        # Generate the S3 file URL
-        s3_url = f"s3://{bucket_name}/{s3_key}"
-        return jsonify({'s3_path': s3_url})
+        # Handle XML files
+        elif file.filename.endswith('.xml'):
+            try:
+                tree = ET.parse(file)
+                root = tree.getroot()
+                data = [{elem.tag: elem.text for elem in child} for child in root]
 
-    else:
-        return jsonify({
-            'error': 'Unsupported file type or missing sheet name.'
-        }), 400
+                # Convert XML data to DataFrame
+                df = pd.DataFrame(data)
+                output = BytesIO()
+                df.to_csv(output, index=False)
+                output.seek(0)
 
+                # Upload to S3
+                s3_key = f"DataAnalysis/Input/{file.filename.replace('.xml', '.csv')}"
+                s3.upload_fileobj(output, bucket_name, s3_key)
+                s3_url = f"s3://{bucket_name}/{s3_key}"
+
+                return jsonify({'s3_path': s3_url}), 200
+
+            except ET.ParseError as e:
+                return jsonify({'error': f"Invalid XML format: {str(e)}"}), 400
+            except Exception as e:
+                return jsonify({'error': f"Failed to process XML file: {str(e)}"}), 500
+
+        else:
+            return jsonify({'error': 'Unsupported file type.'}), 400
+
+    except Exception as e:
+        # Log the exception and return a JSON error response
+        return jsonify({'error': f"Unexpected error: {str(e)}"}), 500
 
 
 @app.route('/run_sql_on_s3_csv', methods=['POST'])
 def run_sql_on_s3_csv():
     try:
-        # Get the input parameters
-        s3_file_path = request.json.get('input_path')
+        s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
         sql_query = request.json.get('sql_query')
-        print(sql_query)
         output_bucket = 'my-internal-bucket'
 
-        if not s3_file_path or not sql_query or not output_bucket:
+        if not s3_file_paths or not sql_query:
             return jsonify({'error': 'Missing required parameters'}), 400
 
-        # Parse the S3 path
-        bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
-        
-        file_name = key.split('/')[-1].split('.')[0]
-        print(file_name)
-        
         s3 = boto3.client(
             's3',
             region_name=os.environ["region_name"],
@@ -462,42 +566,114 @@ def run_sql_on_s3_csv():
             aws_secret_access_key=os.environ["aws_secret_access_key"]
         )
 
-        # Download the CSV file from S3
-        csv_obj = s3.get_object(Bucket=bucket_name, Key=key)
-        csv_data = csv_obj['Body'].read().decode('utf-8')
+        dataframes = {}
 
-        # Load CSV into a pandas DataFrame
-        df = pd.read_csv(StringIO(csv_data))
-        
-        modified_sql_query = sql_query.replace(f'{file_name}', 'df')
-        print(modified_sql_query)
+        for s3_file_path in s3_file_paths:
+            bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
+            file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
+
+            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+            file_data = file_obj['Body'].read()
+
+            # Load CSV or XLSX into pandas DataFrame
+            if key.endswith('.xlsx'):
+                xls = pd.ExcelFile(BytesIO(file_data))
+                df = pd.read_excel(xls, xls.sheet_names[0])
+            else:
+                df = pd.read_csv(StringIO(file_data.decode('utf-8')))
+
+            # Assign DataFrame to the dict with the file name as the key
+            dataframes[file_name] = df
+
+        # Print loaded DataFrames to ensure they are correct
+        print(dataframes.keys())  # This will show you what the DataFrames are named
+
+        # Update locals to include the DataFrames
+        locals().update(dataframes)
 
         # Run the SQL query using pandasql
-        
-        query_result = psql.sqldf(modified_sql_query, locals())
+        query_result = psql.sqldf(sql_query, locals())
 
-        # Generate a new CSV file from the result
+        # Generate output and upload to S3
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             query_result.to_csv(temp_file.name, index=False)
             temp_file_path = temp_file.name
 
-        # Create a unique output key for the new file
         output_key = f'DataAnalysis/Output/{uuid.uuid4()}.csv'
-
-        # Upload the new CSV file to the specified S3 bucket
         with open(temp_file_path, 'rb') as data:
             s3.upload_fileobj(data, output_bucket, output_key)
 
-        # Clean up the temporary file
         os.remove(temp_file_path)
 
-        # Generate the output S3 path
         output_s3_path = f's3://{output_bucket}/{output_key}'
-
         return jsonify({'output_path': output_s3_path}), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+
+# @app.route('/run_sql_on_s3_csv', methods=['POST'])
+# def run_sql_on_s3_csv():
+#     try:
+#         # Get the input parameters
+#         s3_file_path = request.json.get('input_path')
+#         sql_query = request.json.get('sql_query')
+#         print(sql_query)
+#         output_bucket = 'my-internal-bucket'
+
+#         if not s3_file_path or not sql_query or not output_bucket:
+#             return jsonify({'error': 'Missing required parameters'}), 400
+
+#         # Parse the S3 path
+#         bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
+        
+#         file_name = key.split('/')[-1].split('.')[0]
+#         print(file_name)
+        
+#         s3 = boto3.client(
+#             's3',
+#             region_name=os.environ["region_name"],
+#             aws_access_key_id=os.environ["aws_access_key_id"],
+#             aws_secret_access_key=os.environ["aws_secret_access_key"]
+#         )
+
+#         # Download the CSV file from S3
+#         csv_obj = s3.get_object(Bucket=bucket_name, Key=key)
+#         csv_data = csv_obj['Body'].read().decode('utf-8')
+
+#         # Load CSV into a pandas DataFrame
+#         df = pd.read_csv(StringIO(csv_data))
+        
+#         modified_sql_query = sql_query.replace(f'{file_name}', 'df')
+#         print(modified_sql_query)
+
+#         # Run the SQL query using pandasql
+        
+#         query_result = psql.sqldf(modified_sql_query, locals())
+
+#         # Generate a new CSV file from the result
+#         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+#             query_result.to_csv(temp_file.name, index=False)
+#             temp_file_path = temp_file.name
+
+#         # Create a unique output key for the new file
+#         output_key = f'DataAnalysis/Output/{uuid.uuid4()}.csv'
+
+#         # Upload the new CSV file to the specified S3 bucket
+#         with open(temp_file_path, 'rb') as data:
+#             s3.upload_fileobj(data, output_bucket, output_key)
+
+#         # Clean up the temporary file
+#         os.remove(temp_file_path)
+
+#         # Generate the output S3 path
+#         output_s3_path = f's3://{output_bucket}/{output_key}'
+
+#         return jsonify({'output_path': output_s3_path}), 200
+
+#     except Exception as e:
+#         return jsonify({'error': str(e)}), 500
     
     
 @app.route('/downloadfroms3', methods=['POST'])

@@ -16,20 +16,21 @@ import { DnDProvider, useDnD } from './components/DnDContext';
 
 import './index.css';
 import Component from './components/Ui';
-import LocalExtractNode from './components/LocalExtractNode';
+
+// import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from './components/AWSExtractNode';
 import SQLQueryNode from './components/SQLQueryNode';
 import CustomEdge from './components/CustomEdge';
 import LoadNode from './components/LoadNode';
 import {CSVExtractNode, JSONExtractNode, XLSXExtractNode, XMLExtractNode} from './components/FileType';
-import DraggableTable from './components/DraggableTable';
+// import DraggableTable from './components/DraggableTable';
 
 const edgeTypes = {
   custom: CustomEdge,
 };
 
 const nodeTypes = { 
-  LocalExtractor: LocalExtractNode, 
+  // LocalExtractor: LocalExtractNode, 
   AWSExtractor: AWSExtractNode, 
   SQLQuery: SQLQueryNode, 
   FileLoad: LoadNode,
@@ -80,34 +81,84 @@ const DnDFlow = () => {
     );
   };
 
+  // const onConnect = (params) => {
+  //   const sourceNode = nodes.find(node => node.id === params.source);
+  //   const targetNode = nodes.find(node => node.id === params.target);
+
+  //   if (sourceNode && targetNode) {
+  //     const { filePath } = sourceNode.data;
+
+  //     setNodes((nds) =>
+  //       nds.map((node) => {
+  //         if (node.id === targetNode.id) {
+  //           return {
+  //             ...node,
+  //             data: {
+  //               ...node.data,
+  //               sourceId: sourceNode.id,
+  //               filePath: filePath || 'No file path available',
+  //             },
+  //           };
+  //         }
+  //         return node;
+  //       })
+  //     );
+  //   }
+
+  //   setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, deletable: true }, eds));
+
+  //   onConnectEnd(); // Reset the connecting state after connecting
+  // };
+
   const onConnect = (params) => {
     const sourceNode = nodes.find(node => node.id === params.source);
     const targetNode = nodes.find(node => node.id === params.target);
-
+  
     if (sourceNode && targetNode) {
-      const { filePath } = sourceNode.data;
-
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === targetNode.id) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                sourceId: sourceNode.id,
-                filePath: filePath || 'No file path available',
-              },
-            };
-          }
-          return node;
-        })
-      );
+      // Handle connection to SQLQueryNode (collect multiple file paths)
+      if (targetNode.type === 'SQLQuery') {
+        const { filePath } = sourceNode.data;
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === targetNode.id) {
+              const currentFilePaths = node.data.filePaths || [];
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  filePaths: [...currentFilePaths, filePath], // Append new filePath to array
+                },
+              };
+            }
+            return node;
+          })
+        );
+      }
+      
+      // Handle connection from SQLQueryNode to LoadNode (pass single file path)
+      if (sourceNode.type === 'SQLQuery' && targetNode.type === 'FileLoad') {
+        const { filePath } = sourceNode.data;
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === targetNode.id) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  filePath: filePath, // Pass the single file path
+                },
+              };
+            }
+            return node;
+          })
+        );
+      }
     }
-
+  
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, deletable: true }, eds));
-
     onConnectEnd(); // Reset the connecting state after connecting
   };
+  
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -165,7 +216,7 @@ const DnDFlow = () => {
           <Background variant={BackgroundVariant.Lines} gap={12} size={1}/>
         </ReactFlow>
       </div>
-      <DraggableTable data={tableData} />
+      {/* <DraggableTable data={tableData} /> */}
     </div>
   );
 };
