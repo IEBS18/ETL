@@ -137,6 +137,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       name: "OpenAI",
       icon: <img src={gpt} alt="gpt" className="h-8 w-8" />,
       type: "SQLQuery",
+      premium: true,
     },
     {
       name: "Llama",
@@ -239,7 +240,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
           width: isSidebarOpen ? "calc(100% - 50px)" : "calc(100% - 0px)",
         }}
       >
-        <header className="flex items-center justify-between p-4 bg-white border-b">
+        {/* <header className="flex items-center justify-between p-4 bg-white border-b">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               {isSidebarOpen ? (
@@ -249,7 +250,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
               )}
             </Button>
             <div className="flex items-center space-x-2">
-              <img src={logo} className="w-24 h-8" />
+              <img src={logo} className="w-30 h-[25px]" />
               <span className="text-sm font-medium">Pipelines</span>
               <span className="text-sm text-muted-foreground">&gt;</span>
               <Input
@@ -259,6 +260,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
                 onChange={(e) => setFlowName(e.target.value)}
               />
             </div>
+            
             <Button variant="ghost" size="sm" onClick={handleSaveFlow}>
               Save
             </Button>
@@ -301,7 +303,76 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
               Log out
             </Button>
           </div>
+        </header> */}
+        <header className="flex items-center justify-between p-4 bg-white border-b">
+          <div className="flex items-center space-x-4">
+            {/* Left section: Arrow button and logo */}
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+              {isSidebarOpen ? (
+                <ChevronLeft className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+            <img src={logo} className="w-30 h-[25px]" />
+          </div>
+
+          {/* Center section: Pipeline input and save button */}
+          <div className="flex-1 flex items-center justify-center space-x-2">
+            <span className="text-sm font-medium">Pipelines</span>
+            <span className="text-sm text-muted-foreground">&gt;</span>
+            <Input
+              className="h-8 w-40"
+              value={flowName}
+              placeholder="Untitled Pipeline"
+              onChange={(e) => setFlowName(e.target.value)}
+            />
+            <Button variant="ghost" size="sm" onClick={handleSaveFlow}>
+              Save
+            </Button>
+            {savedFlows.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
+                  >
+                    Existing Pipelines
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  {savedFlows.map((flow, index) => (
+                    <DropdownMenuItem
+                      key={index}
+                      onClick={() => handleRestoreFlow(flow)}
+                    >
+                      {flow.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-green-500 text-white"
+                disabled
+              >
+                No Saved Pipelines
+              </Button>
+            )}
+          </div>
+
+          {/* Right section: Welcome message and logout button */}
+          <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium">Welcome! IEBS1</span>
+            <Button variant="ghost" size="sm">
+              Log out
+            </Button>
+          </div>
         </header>
+
         <Tabs defaultValue="extract" className="bg-white border-b">
           <TabsList className="bg-transparent px-4">
             <TabsTrigger value="extract">Data Source</TabsTrigger>

@@ -1,26 +1,25 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState, memo } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import '../index.css';
-import { memo } from 'react';
 
 function LocalExtractNode({ id, data, isConnectable, type }) {
   const [status, setStatus] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [sheetName, setSheetName] = useState(null);
+  const [sheetName, setSheetName] = useState([]);
   const [sheet, setSheet] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // New state to manage loading
+  const [isLoading, setIsLoading] = useState(false);
   const { setNodes } = useReactFlow();
+
+  // Extract setTableData from data early
+  const { setTableData } = data;
 
   const onChange = useCallback((evt) => {
     const file = evt.target.files[0];
     setSelectedFile(file);
-
-    // Reset sheet names and sheet selection if a new file is selected
-    setSheetName(null);
+    setSheetName([]);
     setSheet('');
 
     if (file && file.name.endsWith('.csv')) {
-      // Directly call handleExtract for .csv files
       handleExtract();
     }
   }, []);
@@ -30,12 +29,12 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
   }, []);
 
   const handleDelete = () => {
-    setNodes((nds) => nds.filter((node) => node.id !== id)); // Remove the node by its id
+    setNodes((nds) => nds.filter((node) => node.id !== id));
   };
 
   const handleSheets = async () => {
     if (selectedFile) {
-      setIsLoading(true); // Set loading to true
+      setIsLoading(true);
       const formData = new FormData();
       formData.append('file', selectedFile);
 
@@ -44,12 +43,12 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
           method: 'POST',
           body: formData,
         });
-        const data = await response.json();
-        setSheetName(data.sheet_names);
+        const responseData = await response.json();
+        setSheetName(responseData.sheet_names);
       } catch (error) {
         console.error('Error:', error);
       } finally {
-        setIsLoading(false); // Set loading to false once request is done
+        setIsLoading(false);
       }
     } else {
       console.error('No file selected');
@@ -58,7 +57,7 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
 
   const handleExtract = async () => {
     if (selectedFile) {
-      setIsLoading(true); // Set loading to true
+      setIsLoading(true);
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('sheetName', sheet);
@@ -68,16 +67,32 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
           method: 'POST',
           body: formData,
         });
-        const data = await response.json();
+        const responseData = await response.json();
+        console.log(responseData);
+
+        const extractedData = {
+          columns: responseData.columns,
+          rows: responseData.rows,
+        };
+
+        console.log(extractedData);
+
+        // Check if setTableData is a function before calling it
+        if (typeof setTableData === 'function') {
+          setTableData(extractedData);
+        } else {
+          console.error('setTableData is not a function');
+        }
+
         setNodes((nds) =>
           nds.map((node) =>
-            node.id === id ? { ...node, data: { ...node.data, filePath: data.s3_path } } : node
+            node.id === id ? { ...node, data: { ...node.data, filePath: responseData.s3_path } } : node
           )
         );
       } catch (error) {
         console.error('Error:', error);
       } finally {
-        setIsLoading(false); // Set loading to false once request is done
+        setIsLoading(false);
         setStatus("File Extracted, please connect to transform.");
       }
     } else {
@@ -109,21 +124,21 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
           onChange={onChange}
           className="nodrag mt-2 text-[8px]"
         />
-        {sheetName && selectedFile.name.endsWith('.xlsx') && (
+        {sheetName.length > 0 && selectedFile?.name.endsWith('.xlsx') && (
           <select id="sheetName" name="sheetName" onChange={onChangeSheet} className='nodrag mt-2 text-sm'>
             <option value="">Select the Sheet:</option>
-            {sheetName?.map((file, index) => (
+            {sheetName.map((file, index) => (
               <option key={index} value={file}>{file}</option>
             ))}
           </select>
         )}
         {selectedFile ? (
           selectedFile.name.endsWith('.xlsx') ? (
-            sheetName ? (
+            sheetName.length > 0 ? (
               <button
                 className='bg-black text-white p-1 w-auto self-center mt-2 text-[10px]'
                 onClick={handleExtract}
-                disabled={isLoading} // Disable button during loading
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <>
@@ -137,7 +152,7 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
               <button
                 className='bg-black text-white p-1 w-auto self-center mt-2 text-[10px]'
                 onClick={handleSheets}
-                disabled={isLoading} // Disable button during loading
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <>
@@ -152,7 +167,7 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
             <button
               className='bg-black text-white p-1 w-auto self-center mt-2 text-[10px]'
               onClick={handleExtract}
-              disabled={isLoading} // Disable button during loading
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
