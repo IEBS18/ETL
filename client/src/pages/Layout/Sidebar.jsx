@@ -122,7 +122,7 @@
 //     </div>
 //   );
 // }
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Home, Cog, FileText, User, Boxes, BookOpenText, ChartLine, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/Group.png";
@@ -142,6 +142,15 @@ const bottomItems = [
 ];
 
 export default function Sidebar({ isOpen }) {
+
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const user_id = localStorage.getItem('user_minex_id');
+    // Clear user_id from localStorage and navigate to the home page
+    localStorage.removeItem('user_minex_id');
+    navigate('/');
+  };
   return (
     <div
       className={`flex flex-col justify-between h-screen bg-white text-black w-auto`}
@@ -192,9 +201,10 @@ export default function Sidebar({ isOpen }) {
               variant="ghost"
               size="icon"
               asChild
-              className="w-10 h-10 px-1 flex flex-col mx-auto justify-start"
+              className="w-10 h-10 px-1 flex flex-col mx-auto justify-start cursor-pointer"
+              
             >
-              <div>
+              <div onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />
                 <text className="">Log Out</text>
               </div>

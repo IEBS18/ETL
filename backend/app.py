@@ -14,6 +14,7 @@ import tempfile
 import uuid
 import json
 import xml.etree.ElementTree as ET
+from werkzeug.security import generate_password_hash, check_password_hash
 # from flask_sqlalchemy import SQLAlchemy
 # from flask_bcrypt import Bcrypt
 # from flask_jwt_extended import JWTManager, create_access_token, jwt_required
@@ -32,6 +33,75 @@ app = Flask(__name__)
 
 
 CORS(app)
+
+
+USERS_FILE = 'users.json'
+
+def load_users():
+    try:
+        with open('users.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+# Save users to a file
+def save_users(users):
+    with open('users.json', 'w') as f:
+        json.dump(users, f)
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    username = data['email']  # Assuming 'email' is sent from the frontend
+    password = data['password']
+    first_name = data['firstName']  # Get firstName from the frontend
+    last_name = data['lastName']    # Get lastName from the frontend
+
+    users = load_users()
+
+    if username in users:
+        return jsonify({'message': 'User already exists'}), 400
+
+    # Generate a unique user_id
+    user_id = str(uuid.uuid4())
+
+    # Hash the password before storing it
+    hashed_password = generate_password_hash(password)
+
+    # Store user with user_id, hashed password, firstName, and lastName
+    users[username] = {
+        'user_id': user_id,
+        'first_name': first_name,
+        'last_name': last_name,
+        'password': hashed_password
+    }
+    
+    save_users(users)
+
+    return jsonify({'message': 'User created successfully', 'user_minex_id': user_id, 'first_name': first_name}), 201
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data['email']
+    password = data['password']
+
+    users = load_users()
+
+    if username not in users:
+        return jsonify({'message': 'User does not exist'}), 401
+
+    # Check if the provided password matches the stored hashed password
+    if not check_password_hash(users[username]['password'], password):
+        return jsonify({'message': 'Invalid credentials'}), 401
+
+    # Return the user_id and first_name along with a success message
+    return jsonify({
+        'message': 'Login successful', 
+        'user_minex_id': users[username]['user_id'], 
+        'first_name': users[username]['first_name']
+    }), 200
+ 
 
 
 # class User(db.Model):

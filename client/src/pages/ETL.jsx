@@ -196,7 +196,7 @@ const DnDFlow = () => {
         setNodes={setNodes}
         setEdges={setEdges}
       />
-      <div className="reactflow-wrapper" style={{ width: '100%', height: '71vh' }} ref={reactFlowWrapper}>
+      <div className="reactflow-wrapper" style={{ width: '100%', height: '60vh' }} ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

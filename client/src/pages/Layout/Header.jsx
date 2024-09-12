@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CircleUser } from 'lucide-react';
 
 function Header() {
+    const name = localStorage.getItem('first_name_minex_user');
     return (
         <div>
             <header className="flex items-center justify-between p-4 bg-white border-b">
@@ -70,7 +71,7 @@ function Header() {
                 <div className="flex items-center space-x-4">
                     <div className='flex flex-row gap-x-4'>
                         <CircleUser color="#95d524" />
-                        <text>Hi, IEBS1 {name}</text>
+                        <text>Hi, {name}</text>
                     </div>
                 </div>
             </header>
