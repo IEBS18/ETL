@@ -12,7 +12,7 @@
 // ];
 
 // export default function Sidebar({isOpen}) {
- 
+
 //   return (
 //     <div className="flex flex-col h-screen w-[50px] bg-zinc-800 text-black"  style={{ display: isOpen ? 'block' : 'none', width: '50px', background: '#fff', position: 'fixed', height: '100%' }}>
 //       <div className="p-2">
@@ -123,74 +123,84 @@
 //   );
 // }
 import { Link } from "react-router-dom";
-import { Home, Cog, FileText, User, Boxes, BookOpenText, ChartLine } from "lucide-react";
+import { Home, Cog, FileText, User, Boxes, BookOpenText, ChartLine, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/Layer_1.png";
+import logo from "@/assets/Group.png";
 
 const topItems = [
   { icon: Home, href: "/about-us", text: "Home" },
   { icon: Boxes, href: "/tool", text: "Tools" },
   { icon: FileText, href: "/report", text: "Report" },
   { icon: ChartLine, href: "/visualization", text: "Visualize" },
-  
+
 ];
 
 const bottomItems = [
   { icon: User, href: "/user", text: "Account" },
-  { icon: BookOpenText, href: "/documentation", text: "Docs" },
+  { icon: BookOpenText, href: "/documentation", text: "Manual" },
   { icon: Cog, href: "/settings", text: "Settings" },
 ];
 
 export default function Sidebar({ isOpen }) {
   return (
     <div
-      className={`flex flex-col justify-between h-screen bg-white text-black transition-all duration-300 ${
-        isOpen ? "w-[240px] flex" : "hidden"
-      } fixed top-0 left-0 z-50`}
+      className={`flex flex-col justify-between h-screen bg-white text-black w-auto`}
     >
-      <div  className={`flex flex-col`}> 
-        <div className="p-2 mt-4">
-          <img src={logo} alt="logo" className=" w-2/3 mx-auto" />
+      <div className={`flex flex-col`}>
+        <div className="pt-2 mt-4">
+          <img src={logo} alt="logo" className="w-1/2 mx-auto" />
         </div>
-{/* 
+        {/* 
         <div className="flex flex-col pt mt-10 ml-10 ">
           <h1 className="font-roboto text-[20px] font-bold leading-[23.44px] text-left">About InsiMine:</h1>
           <p className="font-roboto mt-4 text-[16px] leading-[18.75px] text-left">InsiMine is a trusted AI & Analytics-based solutions provider empowering pharmaceutical and healthcare industries to make informed, data-driven decisions.</p>
         </div> */}
 
-        <div className="bg-custom-gradient h-auto mt-[50px] rounded-tr-[39px] rounded-br-[39px] mr-2">
-        <nav className="flex flex-col gap-2 p-2 justify-start">
-          {topItems.map((item) => (
+        <div className="h-auto mt-[30px] rounded-tr-[39px] rounded-br-[39px] mr-2">
+          <nav className="flex flex-col text-black gap-2 py-4 px-2 justify-start">
+            {topItems.map((item) => (
+              <Button
+                key={item.href}
+                variant="ghost"
+                size="icon"
+                asChild
+                className="w-10 h-10 px-1 flex flex-col mx-auto justify-start"
+              >
+                <Link to={item.href}>
+                  <item.icon className="h-5 w-5" />
+                  <text className="">{item.text}</text>
+                </Link>
+              </Button>
+            ))}
+          </nav>
+          <div className={`flex flex-col mt-10 text-black gap-2 py-4 px-2`}>
+            {bottomItems.map((item) => (
+              <Button
+                key={item.href}
+                variant="ghost"
+                size="icon"
+                asChild
+                className="w-10 h-10 px-1 flex flex-col mx-auto justify-start"
+              >
+                <Link to={item.href}>
+                  <item.icon className="h-5 w-5" />
+                  <text className="">{item.text}</text>
+                </Link>
+              </Button>
+            ))}
             <Button
-              key={item.href}
               variant="ghost"
               size="icon"
               asChild
-              className="w-20 h-10 p-0 mx-auto justify-start"
+              className="w-10 h-10 px-1 flex flex-col mx-auto justify-start"
             >
-              <Link to={item.href}>
-                <item.icon className="h-5 w-5" />
-                <text className="ml-2">{item.text}</text>
-              </Link>
+              <div>
+                <LogOut className="h-5 w-5" />
+                <text className="">Log Out</text>
+              </div>
+
             </Button>
-          ))}
-        </nav>
-        <div className={`flex flex-col mt-10 gap-2 p-2`}>
-        {bottomItems.map((item) => (
-          <Button
-            key={item.href}
-            variant="ghost"
-            size="icon"
-            asChild
-            className="w-20 h-10 p-0 mx-auto justify-start"
-          >
-            <Link to={item.href}>
-              <item.icon className="h-5 w-5" />
-              <text className="ml-2">{item.text}</text>
-            </Link>
-          </Button>
-        ))}
-      </div>
+          </div>
         </div>
 
       </div>

@@ -9,6 +9,8 @@ import Ui from './components/Ui.jsx'
 import AwsPopUp from './pages/AwsPopUp.jsx'
 import SqlPopUp from './pages/SqlPopUp.jsx'
 import { Dashboard } from './components/Dashboard.jsx'
+import Layout from './pages/Layout/Layout.jsx'
+import ETL from './pages/ETL.jsx'
 
 const router = createBrowserRouter([
   {
@@ -39,6 +41,14 @@ const router = createBrowserRouter([
     path: '/visualization',
     element: <Dashboard/>
   },
+  {
+    path: '/ETL',
+    element: (  
+        <Layout>
+          <ETL />
+        </Layout>
+
+    )  },
 ])
 
 createRoot(document.getElementById('root')).render(

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
-import Sidebar from "../Sidebar";
+import Sidebar from "../pages/Layout/Sidebar";
 import awsS3 from "../assets/export/awsS3.png";
 import mysql from "../assets/export/mysql.png";
 import file from "../assets/export/file.png";
@@ -211,9 +211,8 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       <Button
         key={item.name}
         variant="outline"
-        className={`min-w-20 h-15 px-3 py-2 flex flex-col items-center text-[10px] font-bold ${
-          item.premium ? "cursor-not-allowed" : ""
-        }`}
+        className={`min-w-20 h-15 px-3 py-2 flex flex-col items-center text-[10px] font-bold ${item.premium ? "cursor-not-allowed" : ""
+          }`}
         onDragStart={
           item.premium ? null : (event) => onDragStart(event, item.type)
         }
@@ -231,14 +230,14 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
   );
 
   return (
-    <div className="flex">
-      <Sidebar isOpen={isSidebarOpen} />
+    <>
+      {/* <Sidebar isOpen={isSidebarOpen} /> */}
       <div
-        className="flex flex-col bg-background transition-all duration-300"
-        style={{
-          marginLeft: isSidebarOpen ? "240px" : "0px",
-          width: isSidebarOpen ? "calc(100% - 50px)" : "calc(100% - 0px)",
-        }}
+        className="flex flex-col w-full bg-background transition-all duration-300"
+        // style={{
+        //   marginLeft: isSidebarOpen ? "240px" : "0px",
+        //   width: isSidebarOpen ? "calc(100% - 50px)" : "calc(100% - 0px)",
+        // }}
       >
         {/* <header className="flex items-center justify-between p-4 bg-white border-b">
           <div className="flex items-center space-x-4">
@@ -304,21 +303,21 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
             </Button>
           </div>
         </header> */}
-        <header className="flex items-center justify-between p-4 bg-white border-b">
-          <div className="flex items-center space-x-4">
+        {/* <header className="flex items-center justify-between p-4 bg-white border-b">
+          <div className="flex items-center space-x-4"> */}
             {/* Left section: Arrow button and logo */}
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+            {/* <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               {isSidebarOpen ? (
                 <ChevronLeft className="h-4 w-4" />
               ) : (
                 <ChevronRight className="h-4 w-4" />
               )}
-            </Button>
-            <img src={logo} className="w-30 h-[25px]" />
-          </div>
+            </Button> */}
+            {/* <img src={logo} className="w-30 h-[25px]" />
+          </div> */}
 
           {/* Center section: Pipeline input and save button */}
-          <div className="flex-1 flex items-center justify-center space-x-2">
+          {/* <div className="flex-1 flex items-center justify-center space-x-2">
             <span className="text-sm font-medium">Pipelines</span>
             <span className="text-sm text-muted-foreground">&gt;</span>
             <Input
@@ -362,22 +361,70 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
                 No Saved Pipelines
               </Button>
             )}
-          </div>
+          </div> */}
 
           {/* Right section: Welcome message and logout button */}
-          <div className="flex items-center space-x-4">
+          {/* <div className="flex items-center space-x-4">
             <span className="text-sm font-medium">Welcome! IEBS1</span>
             <Button variant="ghost" size="sm">
               Log out
             </Button>
           </div>
-        </header>
-
+        </header> */}
         <Tabs defaultValue="extract" className="bg-white border-b">
-          <TabsList className="bg-transparent px-4">
-            <TabsTrigger value="extract">Data Source</TabsTrigger>
-            <TabsTrigger value="transform">Transform</TabsTrigger>
-            <TabsTrigger value="load">Load</TabsTrigger>
+          <TabsList className="bg-transparent w-full justify-between">
+            <div className="flex items-center justify-between mx-4 mt-2">
+              <div className="flex items-center mr-[280px]">
+                <TabsTrigger value="extract">Data Source</TabsTrigger>
+                <TabsTrigger value="transform">Transform</TabsTrigger>
+                <TabsTrigger value="load">Load</TabsTrigger>
+              </div>
+              <div className="flex-1 flex items-center justify-center space-x-2 ml-40">
+                <span className="text-sm font-medium">Pipelines</span>
+                <span className="text-sm text-muted-foreground">&gt;</span>
+                <Input
+                  className="h-8 w-40"
+                  value={flowName}
+                  placeholder="Untitled Pipeline"
+                  onChange={(e) => setFlowName(e.target.value)}
+                />
+                <Button variant="ghost" size="sm" onClick={handleSaveFlow}>
+                  Save
+                </Button>
+                {savedFlows.length > 0 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
+                      >
+                        Existing Pipelines
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      {savedFlows.map((flow, index) => (
+                        <DropdownMenuItem
+                          key={index}
+                          onClick={() => handleRestoreFlow(flow)}
+                        >
+                          {flow.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-green-500 text-white"
+                    disabled
+                  >
+                    No Saved Pipelines
+                  </Button>
+                )}
+              </div>
+            </div>
           </TabsList>
           <TabsContent value="extract" className="p-4">
             <div className="flex space-x-2">
@@ -396,6 +443,6 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </>
   );
 }
