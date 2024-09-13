@@ -137,6 +137,8 @@ function Dashboard() {
     }
   };
 
+  const userID = localStorage.getItem('user_minex_id')
+
   const availableFilenames = getFilenames();
   const schemaFieldsArray = Object.keys(schemaFields);
 

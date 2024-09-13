@@ -18,6 +18,8 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
 
   const { setTableData } = data;
 
+  const userID = localStorage.getItem('user_minex_id')
+
   const allowedFileExtensions = {
     csv: ".csv",
     json: ".json",
@@ -65,7 +67,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
   // Function to delete the node
   const handleDelete = () => {
     setNodes((nds) => nds.filter((node) => node.id !== id));
-    removeData(id);
+    removeData(id, userID);
   };
 
   // Function to handle sheet loading for XLSX files
@@ -150,6 +152,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
             console.log(responseData.schema)
     
             console.log(extractedData);
+            
 
             addData(id, file.name, extractedData , schema); 
             addVisualize(id, file.name, extractedData, schema); 

@@ -47,25 +47,35 @@ def load_users():
         return {}
 
 # Save users to a file
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:your-password@your-db-endpoint:5432/your-db-name'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('database_url')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Define the User model (mapping to PostgreSQL table)
+# User Model for Authentication
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(36), unique=True, nullable=False)  # Unique user_id
-    first_name = db.Column(db.String(50), nullable=False)
-    last_name = db.Column(db.String(50), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)  # Unique email
-    password = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Text, unique=True, nullable=False)  # UUID for user identification
+    first_name = db.Column(db.Text, nullable=False)
+    last_name = db.Column(db.Text, nullable=False)
+    email = db.Column(db.Text, unique=True, nullable=False)
+    password = db.Column(db.Text, nullable=False)
+    extracted_data = db.relationship('ExtractedData', backref='user', lazy=True)
+
+# ExtractedData Model for storing extracted data associated with a user
+class ExtractedData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    node_id = db.Column(db.String(50), nullable=False)
+    file_name = db.Column(db.String(100), nullable=False)
+    schema = db.Column(db.JSON, nullable=False)  # Store schema as JSON
+    data = db.Column(db.JSON, nullable=False)    # Store extracted data as JSON
+    user_id = db.Column(db.Text, db.ForeignKey('user.user_id'), nullable=False)
 
 # Initialize the database and create the table(s)
 with app.app_context():
     db.create_all()
 
-# Sign up endpoint
+# Sign up route
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
@@ -89,7 +99,7 @@ def signup():
 
     return jsonify({'message': 'User created successfully', 'user_minex_id': user_id, 'first_name': first_name}), 201
 
-# Login endpoint
+# Login route
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -112,6 +122,66 @@ def login():
         'user_minex_id': user.user_id, 
         'first_name': user.first_name
     }), 200
+
+# Route to save extracted data to the database
+@app.route('/save-data', methods=['POST'])
+def save_data():
+    data = request.get_json()
+    node_id = data['node_id']
+    file_name = data['file_name']
+    extracted_data = data['extracted_data']
+    schema = data['schema']
+    user_id = data['user_id']
+
+    # Store the data in the database
+    new_entry = ExtractedData(node_id=node_id, file_name=file_name, schema=schema, data=extracted_data, user_id=user_id)
+    db.session.add(new_entry)
+    db.session.commit()
+
+    return jsonify({'message': 'Data saved successfully'}), 201
+
+# Route to remove extracted data from the database
+@app.route('/remove-data', methods=['DELETE'])
+def remove_data():
+    data = request.get_json()
+    node_id = data['node_id']
+    user_id = data['user_id']
+
+    # Find and remove the data entry from the database
+    entry = ExtractedData.query.filter_by(node_id=node_id, user_id=user_id).first()
+    if entry:
+        db.session.delete(entry)
+        db.session.commit()
+        return jsonify({'message': 'Data removed successfully'}), 200
+    else:
+        return jsonify({'message': 'Data not found'}), 404
+
+# Route to retrieve all extracted data for a user
+@app.route('/get-data', methods=['GET'])
+def get_data():
+    user_id = request.args.get('user_id')
+    data_entries = ExtractedData.query.filter_by(user_id=user_id).all()
+
+    # Convert the database entries into a dictionary
+    data = {entry.node_id: {
+        'file_name': entry.file_name,
+        'extracted_data': entry.data,
+        'schema': entry.schema
+    } for entry in data_entries}
+
+    return jsonify(data), 200
+
+# Route to retrieve all filenames for a user
+@app.route('/get-filenames', methods=['GET'])
+def get_filenames():
+    user_id = request.args.get('user_id')
+    data_entries = ExtractedData.query.filter_by(user_id=user_id).all()
+
+    filenames = {entry.file_name for entry in data_entries}
+    print(filenames)
+    return jsonify({'filenames': list(filenames)}), 200
+
+
 @app.route('/localextract', methods=['POST'])
 def local_extract():
     file = request.files['file']
