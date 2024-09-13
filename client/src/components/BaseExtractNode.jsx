@@ -2,6 +2,9 @@ import { useCallback, useState } from "react";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import "../index.css";
 import { memo } from "react";
+import { addData } from './data.js';
+import { removeData } from "./data.js";
+import { addVisualize } from "./visualize";
 
 function BaseExtractNode({ id, data, isConnectable, type }) {
   const [status, setStatus] = useState("");
@@ -12,6 +15,8 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
   const [loadSheetsClicked, setLoadSheetsClicked] = useState(false); // New state for XLSX Load Sheets button
   const { setNodes } = useReactFlow();
   const [error, setError] = useState(""); // State for error messages
+
+  const { setTableData } = data;
 
   const allowedFileExtensions = {
     csv: ".csv",
@@ -60,6 +65,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
   // Function to delete the node
   const handleDelete = () => {
     setNodes((nds) => nds.filter((node) => node.id !== id));
+    removeData(id);
   };
 
   // Function to handle sheet loading for XLSX files
@@ -120,7 +126,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
 
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await response.json();
+          const responseData = await response.json();
           console.log(data);
           if (!response.ok || data.error) {
             // Handle error from backend
@@ -130,10 +136,30 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
             setNodes((nds) =>
               nds.map((node) =>
                 node.id === id
-                  ? { ...node, data: { ...node.data, filePath: data.s3_path } }
+                  ? { ...node, data: { ...node.data, filePath: responseData.s3_path } }
                   : node
               )
             );
+            const extractedData = {
+              columns: responseData.columns,
+              rows: responseData.first_five_rows,
+            };
+
+            const schema = responseData.schema;
+
+            console.log(responseData.schema)
+    
+            console.log(extractedData);
+
+            addData(id, file.name, extractedData , schema); 
+            addVisualize(id, file.name, extractedData, schema); 
+    
+            // Check if setTableData is a function before calling it
+            if (typeof setTableData === 'function') {
+              setTableData(extractedData);
+            } else {
+              console.error('setTableData is not a function');
+            }
             setStatus(`File "${file.name}" Extracted, please connect to transform.`);
             setError(""); // Clear error if extraction is successful
           }

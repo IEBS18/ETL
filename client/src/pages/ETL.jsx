@@ -9,30 +9,26 @@ import {
   useReactFlow,
   MiniMap,
   Background,
-  BackgroundVariant
+  BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { DnDProvider, useDnD } from '@/components/DnDContext';
-
 import '../index.css';
 import Component from '@/components/Ui';
-
-// import LocalExtractNode from './components/LocalExtractNode';
 import AWSExtractNode from '@/components/AWSExtractNode';
 import SQLQueryNode from '@/components/SQLQueryNode';
 import CustomEdge from '@/components/CustomEdge';
 import LoadNode from '@/components/LoadNode';
-import {CSVExtractNode, JSONExtractNode, XLSXExtractNode, XMLExtractNode} from '@/components/FileType';
-// import DraggableTable from './components/DraggableTable';
+import { CSVExtractNode, JSONExtractNode, XLSXExtractNode, XMLExtractNode } from '@/components/FileType';
+import DraggableTable from '@/components/DraggableTable';
 
 const edgeTypes = {
   custom: CustomEdge,
 };
 
-const nodeTypes = { 
-  // LocalExtractor: LocalExtractNode, 
-  AWSExtractor: AWSExtractNode, 
-  SQLQuery: SQLQueryNode, 
+const nodeTypes = {
+  AWSExtractor: AWSExtractNode,
+  SQLQuery: SQLQueryNode,
   FileLoad: LoadNode,
   CSVExtract: CSVExtractNode,
   XLXSExtract: XLSXExtractNode,
@@ -51,71 +47,18 @@ const DnDFlow = () => {
   const [type] = useDnD();
 
   const [tableData, setTableData] = useState(null);
+  const [isTableAtTop, setIsTableAtTop] = useState(false); // Track the position of the table
 
-  const onConnectStart = (event, params) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === params.nodeId) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              isConnecting: true,
-            },
-          };
-        }
-        return node;
-      })
-    );
+  // Toggle the position of the table
+  const toggleTablePosition = () => {
+    setIsTableAtTop(!isTableAtTop);
   };
-
-  const onConnectEnd = () => {
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          isConnecting: false,
-        },
-      }))
-    );
-  };
-
-  // const onConnect = (params) => {
-  //   const sourceNode = nodes.find(node => node.id === params.source);
-  //   const targetNode = nodes.find(node => node.id === params.target);
-
-  //   if (sourceNode && targetNode) {
-  //     const { filePath } = sourceNode.data;
-
-  //     setNodes((nds) =>
-  //       nds.map((node) => {
-  //         if (node.id === targetNode.id) {
-  //           return {
-  //             ...node,
-  //             data: {
-  //               ...node.data,
-  //               sourceId: sourceNode.id,
-  //               filePath: filePath || 'No file path available',
-  //             },
-  //           };
-  //         }
-  //         return node;
-  //       })
-  //     );
-  //   }
-
-  //   setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, deletable: true }, eds));
-
-  //   onConnectEnd(); // Reset the connecting state after connecting
-  // };
 
   const onConnect = (params) => {
-    const sourceNode = nodes.find(node => node.id === params.source);
-    const targetNode = nodes.find(node => node.id === params.target);
-  
+    const sourceNode = nodes.find((node) => node.id === params.source);
+    const targetNode = nodes.find((node) => node.id === params.target);
+
     if (sourceNode && targetNode) {
-      // Handle connection to SQLQueryNode (collect multiple file paths)
       if (targetNode.type === 'SQLQuery') {
         const { filePath } = sourceNode.data;
         setNodes((nds) =>
@@ -126,7 +69,7 @@ const DnDFlow = () => {
                 ...node,
                 data: {
                   ...node.data,
-                  filePaths: [...currentFilePaths, filePath], // Append new filePath to array
+                  filePaths: [...currentFilePaths, filePath],
                 },
               };
             }
@@ -134,8 +77,7 @@ const DnDFlow = () => {
           })
         );
       }
-      
-      // Handle connection from SQLQueryNode to LoadNode (pass single file path)
+
       if (sourceNode.type === 'SQLQuery' && targetNode.type === 'FileLoad') {
         const { filePath } = sourceNode.data;
         setNodes((nds) =>
@@ -145,7 +87,7 @@ const DnDFlow = () => {
                 ...node,
                 data: {
                   ...node.data,
-                  filePath: filePath, // Pass the single file path
+                  filePath: filePath,
                 },
               };
             }
@@ -154,11 +96,9 @@ const DnDFlow = () => {
         );
       }
     }
-  
+
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: true, deletable: true }, eds));
-    onConnectEnd(); // Reset the connecting state after connecting
   };
-  
 
   const onDragOver = useCallback((event) => {
     event.preventDefault();
@@ -185,18 +125,13 @@ const DnDFlow = () => {
 
       setNodes((nds) => nds.concat(newNode));
     },
-    [screenToFlowPosition, type, nodes, setNodes, setTableData],
+    [screenToFlowPosition, type, nodes, setNodes, setTableData]
   );
 
   return (
-    <div className="flex flex-col">
-      <Component
-        nodes={nodes}
-        edges={edges}
-        setNodes={setNodes}
-        setEdges={setEdges}
-      />
-      <div className="reactflow-wrapper" style={{ width: '100%', height: '60vh' }} ref={reactFlowWrapper}>
+    <div className="relative flex flex-col h-full">
+      <Component nodes={nodes} edges={edges} setNodes={setNodes} setEdges={setEdges} />
+      <div className="reactflow-wrapper relative" style={{ width: '100%', height: '60vh' }} ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -205,18 +140,28 @@ const DnDFlow = () => {
           onConnect={onConnect}
           onDrop={onDrop}
           onDragOver={onDragOver}
-          fitView
+          fitView={false}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          onConnectStart={onConnectStart}
-          onConnectEnd={onConnectEnd}
+          className="h-full w-full"
         >
-          <Controls position='top-right'/>
+          <Controls position="top-right" />
           <MiniMap />
-          <Background variant={BackgroundVariant.Lines} gap={12} size={1}/>
+          <Background variant={BackgroundVariant.Lines} gap={12} size={1} />
         </ReactFlow>
+
+        {/* Draggable table with arrow inside the table */}
+        <div
+          className={`absolute ${isTableAtTop ? 'top-0' : 'bottom-0'} left-0 w-full transition-all duration-500`}
+          style={{ zIndex: 10 }} // Ensure table is on top of ReactFlow but below header
+        >
+          <DraggableTable
+            data={tableData}
+            toggleTablePosition={toggleTablePosition} // Pass the toggle function
+            isTableAtTop={isTableAtTop} // Pass current state to control arrow icon
+          />
+        </div>
       </div>
-      {/* <DraggableTable data={tableData} /> */}
     </div>
   );
 };

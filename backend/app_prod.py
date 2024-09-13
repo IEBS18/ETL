@@ -19,6 +19,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # from flask_bcrypt import Bcrypt
 # from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 
+from flask_sqlalchemy import SQLAlchemy
+
 load_dotenv()
 app = Flask(__name__)
 # app.config['SQLALCHEMY_DATABASE_URI'] = os
@@ -45,109 +47,71 @@ def load_users():
         return {}
 
 # Save users to a file
-def save_users(users):
-    with open('users.json', 'w') as f:
-        json.dump(users, f)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:your-password@your-db-endpoint:5432/your-db-name'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+db = SQLAlchemy(app)
+
+# Define the User model (mapping to PostgreSQL table)
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(36), unique=True, nullable=False)  # Unique user_id
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)  # Unique email
+    password = db.Column(db.String(100), nullable=False)
+
+# Initialize the database and create the table(s)
+with app.app_context():
+    db.create_all()
+
+# Sign up endpoint
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
-    username = data['email']  # Assuming 'email' is sent from the frontend
+    email = data['email']
     password = data['password']
-    first_name = data['firstName']  # Get firstName from the frontend
-    last_name = data['lastName']    # Get lastName from the frontend
+    first_name = data['firstName']
+    last_name = data['lastName']
 
-    users = load_users()
-
-    if username in users:
+    # Check if user already exists
+    if User.query.filter_by(email=email).first():
         return jsonify({'message': 'User already exists'}), 400
 
-    # Generate a unique user_id
+    # Generate a unique user_id and hash the password
     user_id = str(uuid.uuid4())
-
-    # Hash the password before storing it
     hashed_password = generate_password_hash(password)
 
-    # Store user with user_id, hashed password, firstName, and lastName
-    users[username] = {
-        'user_id': user_id,
-        'first_name': first_name,
-        'last_name': last_name,
-        'password': hashed_password
-    }
-    
-    save_users(users)
+    # Create new user and store in the database
+    new_user = User(user_id=user_id, first_name=first_name, last_name=last_name, email=email, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
 
     return jsonify({'message': 'User created successfully', 'user_minex_id': user_id, 'first_name': first_name}), 201
 
+# Login endpoint
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    username = data['email']
+    email = data['email']
     password = data['password']
 
-    users = load_users()
+    # Retrieve user from the database
+    user = User.query.filter_by(email=email).first()
 
-    if username not in users:
+    if not user:
         return jsonify({'message': 'User does not exist'}), 401
 
-    # Check if the provided password matches the stored hashed password
-    if not check_password_hash(users[username]['password'], password):
+    # Check if the password matches the hashed password in the database
+    if not check_password_hash(user.password, password):
         return jsonify({'message': 'Invalid credentials'}), 401
 
-    # Return the user_id and first_name along with a success message
+    # Return the user_id and first_name on successful login
     return jsonify({
         'message': 'Login successful', 
-        'user_minex_id': users[username]['user_id'], 
-        'first_name': users[username]['first_name']
+        'user_minex_id': user.user_id, 
+        'first_name': user.first_name
     }), 200
- 
-
-
-# class User(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     username = db.Column(db.String(150), unique=True, nullable=False)
-#     email = db.Column(db.String(150), unique=True, nullable=False)
-#     password = db.Column(db.String(256), nullable=False)
-
-#     def __repr__(self):
-#         return f"<User {self.username}>"
-    
-    
-# Create the database tables
-# with app.app_context():
-#     db.create_all()
-    
-    
-    
-# @app.route('/signup', methods=['POST'])
-# def signup():
-#     data = request.get_json()
-
-#     if User.query.filter_by(email=data['email']).first():
-#         return jsonify({"message": "Email already registered"}), 400
-
-#     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-#     new_user = User(username=data['name'], email=data['email'], password=hashed_password)
-
-#     db.session.add(new_user)
-#     db.session.commit()
-
-#     return jsonify({"message": "User created successfully"}), 201
-
-
-# @app.route('/login', methods=['POST'])
-# def login():
-#     data = request.get_json()
-
-#     user = User.query.filter_by(email=data['email']).first()
-#     if user and bcrypt.check_password_hash(user.password, data['password']):
-#         access_token = create_access_token(identity=user.id)
-#         return jsonify(access_token=access_token), 200
-
-#     return jsonify({"message": "Invalid email or password"}), 401
-
-
 @app.route('/localextract', methods=['POST'])
 def local_extract():
     file = request.files['file']
@@ -184,123 +148,6 @@ def local_extract():
         return jsonify({
             'error': 'Unsupported file type. Please upload a .csv, .xlsx, .json, or .xml file.'
         }), 400
-
-# @app.route('/localextractsheet', methods=['POST'])
-# def local_extract_sheet_to_s3():
-#     try:
-#         # Get file and optional sheet name
-#         file = request.files.get('file')
-#         sheet_name = request.form.get('sheetName')  # Optional, for XLSX files
-
-#         if not file:
-#             return jsonify({'error': 'No file provided'}), 400
-
-#         bucket_name = os.environ['bucket_name']
-
-#         # Initialize S3 client
-#         s3 = boto3.client(
-#             's3',
-#             region_name=os.environ['region_name'],
-#             aws_access_key_id=os.environ['aws_access_key_id'],
-#             aws_secret_access_key=os.environ['aws_secret_access_key']
-#         )
-
-#         # Handle XLSX files with sheet selection
-#         if file.filename.endswith('.xlsx') and sheet_name:
-#             try:
-#                 workbook = pd.ExcelFile(file)
-#                 df = pd.read_excel(workbook, sheet_name=sheet_name)
-
-#                 # Convert DataFrame to CSV in memory
-#                 output = BytesIO()
-#                 df.to_csv(output, index=False)
-#                 output.seek(0)
-
-#                 # Upload to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.xlsx', f'_{sheet_name}.csv')}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process XLSX file: {str(e)}"}), 500
-
-#         # Handle CSV files
-#         elif file.filename.endswith('.csv'):
-#             try:
-#                 output = BytesIO()
-#                 file.save(output)
-#                 output.seek(0)
-
-#                 # Save CSV content to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process CSV file: {str(e)}"}), 500
-
-#         # Handle JSON files
-#         elif file.filename.endswith('.json'):
-#             try:
-#                 file_content = file.read().decode('utf-8')
-#                 if file_content.strip().startswith('['):
-#                     data = json.loads(file_content)
-#                 else:
-#                     data = [json.loads(line) for line in file_content.strip().splitlines()]
-
-#                 # Convert JSON to DataFrame
-#                 df = pd.json_normalize(data)
-#                 output = BytesIO()
-#                 df.to_csv(output, index=False)
-#                 output.seek(0)
-
-#                 # Upload to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except json.JSONDecodeError as e:
-#                 return jsonify({'error': f"Invalid JSON format: {str(e)}"}), 400
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process JSON file: {str(e)}"}), 500
-
-#         # Handle XML files
-#         elif file.filename.endswith('.xml'):
-#             try:
-#                 tree = ET.parse(file)
-#                 root = tree.getroot()
-#                 data = [{elem.tag: elem.text for elem in child} for child in root]
-
-#                 # Convert XML data to DataFrame
-#                 df = pd.DataFrame(data)
-#                 output = BytesIO()
-#                 df.to_csv(output, index=False)
-#                 output.seek(0)
-
-#                 # Upload to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.xml', '.csv')}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except ET.ParseError as e:
-#                 return jsonify({'error': f"Invalid XML format: {str(e)}"}), 400
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process XML file: {str(e)}"}), 500
-
-#         else:
-#             return jsonify({'error': 'Unsupported file type.'}), 400
-
-#     except Exception as e:
-#         # Log the exception and return a JSON error response
-#         return jsonify({'error': f"Unexpected error: {str(e)}"}), 500
 
 @app.route('/localextractsheet', methods=['POST'])
 def local_extract_sheet_to_s3():
@@ -679,7 +526,4 @@ def sql_extract():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
 

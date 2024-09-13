@@ -8,7 +8,7 @@ import './index.css'
 import Ui from './components/Ui.jsx'
 import AwsPopUp from './pages/AwsPopUp.jsx'
 import SqlPopUp from './pages/SqlPopUp.jsx'
-import { Dashboard } from './components/Dashboard.jsx'
+import Dashboard  from './components/Dashboard.jsx'
 import Layout from './pages/Layout/Layout.jsx'
 import ETL from './pages/ETL.jsx'
 import Authenticate from './pages/Authenticate.jsx'
@@ -40,7 +40,9 @@ const router = createBrowserRouter([
   },
   {
     path: '/visualization',
-    element: <Dashboard/>
+    element: (<Layout>
+      <Dashboard/>
+    </Layout>)
   },
   {
     path: '/ETL',

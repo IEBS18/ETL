@@ -72,7 +72,7 @@ function LocalExtractNode({ id, data, isConnectable, type }) {
 
         const extractedData = {
           columns: responseData.columns,
-          rows: responseData.rows,
+          rows: responseData.first_five_rows,
         };
 
         console.log(extractedData);
