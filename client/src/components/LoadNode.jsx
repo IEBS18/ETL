@@ -41,7 +41,7 @@
 //         };
     
 //         try {
-//             const response = await fetch('http://localhost:5000/downloadfroms3', {
+//             const response = await fetch('http://54.234.139.165:5000/downloadfroms3', {
 //                 method: 'POST',
 //                 headers: {
 //                     'Access-Control-Allow-Origin': '*',
@@ -134,7 +134,7 @@ function LoadNode({ id, data, isConnectable }) {
         setError(""); // Reset any previous errors
 
         try {
-            const response = await fetch('http://localhost:5000/downloadfroms3', {
+            const response = await fetch('http://54.234.139.165:5000/downloadfroms3', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
