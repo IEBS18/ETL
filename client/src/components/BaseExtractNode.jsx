@@ -144,7 +144,11 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
             );
             const extractedData = {
               columns: responseData.columns,
-              rows: responseData.first_five_rows,
+              rows: (responseData.first_five_rows).slice(0,5),
+            };
+            const visualizeData = {
+              columns: responseData.columns,
+              rows: (responseData.first_five_rows),
             };
 
             const schema = responseData.schema;
@@ -155,7 +159,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
             
 
             addData(id, file.name, extractedData , schema); 
-            addVisualize(id, file.name, extractedData, schema); 
+            addVisualize(id, file.name, visualizeData, schema); 
     
             // Check if setTableData is a function before calling it
             if (typeof setTableData === 'function') {

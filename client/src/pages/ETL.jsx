@@ -21,6 +21,7 @@ import CustomEdge from '@/components/CustomEdge';
 import LoadNode from '@/components/LoadNode';
 import { CSVExtractNode, JSONExtractNode, XLSXExtractNode, XMLExtractNode } from '@/components/FileType';
 import DraggableTable from '@/components/DraggableTable';
+import OpenAINode from '@/components/OpenAINode';
 
 const edgeTypes = {
   custom: CustomEdge,
@@ -34,6 +35,7 @@ const nodeTypes = {
   XLXSExtract: XLSXExtractNode,
   JSONExtract: JSONExtractNode,
   XMLExtract: XMLExtractNode,
+  OpenAIQuery: OpenAINode,
 };
 
 let id = 0;
@@ -77,8 +79,43 @@ const DnDFlow = () => {
           })
         );
       }
+      if (targetNode.type === 'OpenAIQuery') {
+        const { filePath } = sourceNode.data;
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === targetNode.id) {
+              const currentFilePaths = node.data.filePaths || [];
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  filePaths: [...currentFilePaths, filePath],
+                },
+              };
+            }
+            return node;
+          })
+        );
+      }
 
       if (sourceNode.type === 'SQLQuery' && targetNode.type === 'FileLoad') {
+        const { filePath } = sourceNode.data;
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === targetNode.id) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  filePath: filePath,
+                },
+              };
+            }
+            return node;
+          })
+        );
+      }
+      if (sourceNode.type === 'OpenAIQuery' && targetNode.type === 'FileLoad') {
         const { filePath } = sourceNode.data;
         setNodes((nds) =>
           nds.map((node) => {

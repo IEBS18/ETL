@@ -10,7 +10,7 @@ import { addVisualize, getVisualize, getFilenames } from './visualize'; // Updat
 const chartTypes = [
   { value: 'line', label: 'Line Chart', fields: ['xAxis', 'yAxis'] },
   { value: 'bar', label: 'Bar Chart', fields: ['xAxis', 'yAxis'] },
-  { value: 'pie', label: 'Pie Chart', fields: ['name', 'value'] },
+  // { value: 'pie', label: 'Pie Chart', fields: ['name', 'value'] },
   { value: 'area', label: 'Area Chart', fields: ['xAxis', 'yAxis'] },
 ];
 
@@ -21,6 +21,8 @@ function Dashboard() {
   const [chartData, setChartData] = useState(null);
   const [error, setError] = useState('');
   const [schemaFields, setSchemaFields] = useState({});
+  const [xAxisOptions, setXAxisOptions] = useState([]);
+  const [yAxisOptions, setYAxisOptions] = useState([]);
 
   useEffect(() => {
     if (selectedFilename) {
@@ -34,6 +36,13 @@ function Dashboard() {
           const visualizeData = data[nodeId];
           const schema = visualizeData.schema || {};
           setSchemaFields(schema);
+
+          const xAxisOptions = Object.keys(schema);
+          const yAxisOptions = Object.keys(schema);
+
+          setXAxisOptions(xAxisOptions);
+          setYAxisOptions(yAxisOptions);
+          
           setFieldValues({
             xAxis: '',
             yAxis: '',
@@ -79,65 +88,80 @@ function Dashboard() {
     setError('');
   };
 
-  const renderChart = () => {
-    if (!chartData) return null;
+const renderChart = () => {
+  if (!chartData) return null;
 
-    const { value: chartType } = selectedChart;
-    const commonProps = {
-      data: chartData,
-      margin: { top: 5, right: 30, left: 20, bottom: 5 },
-    };
-
-    switch (chartType) {
-      case 'line':
-      case 'area':
-        const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
-        const DataComponent = chartType === 'line' ? Line : Area;
-        return (
-          <ChartComponent {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={fieldValues.xAxis} />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <DataComponent type="monotone" dataKey={fieldValues.yAxis} stroke="#8884d8" fill="#8884d8" />
-          </ChartComponent>
-        );
-      case 'bar':
-        return (
-          <BarChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={fieldValues.xAxis} />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey={fieldValues.yAxis} fill="#8884d8" />
-          </BarChart>
-        );
-      case 'pie':
-        return (
-          <PieChart {...commonProps}>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey={fieldValues.value}
-              nameKey={fieldValues.name}
-              label
-            />
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        );
-      default:
-        return null;
-    }
+  const { value: chartType } = selectedChart;
+  const commonProps = {
+    data: chartData,
+    margin: { top: 5, right: 30, left: 20, bottom: 30 }, // Adjust bottom margin for label spacing
   };
 
-  const userID = localStorage.getItem('user_minex_id')
+  const xAxisLabel = selectedChart.fields.includes('xAxis') ? fieldValues.xAxis : 'X Axis';
+  const yAxisLabel = selectedChart.fields.includes('yAxis') ? fieldValues.yAxis : 'Y Axis';
+
+  switch (chartType) {
+    case 'line':
+    case 'area':
+      const ChartComponent = chartType === 'line' ? LineChart : AreaChart;
+      const DataComponent = chartType === 'line' ? Line : Area;
+      return (
+        <ChartComponent {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey={fieldValues.xAxis || 'default'} 
+            label={{ value: xAxisLabel }}
+            tick={false} // Hide X-axis tick labels
+          />
+          <YAxis 
+            // label={{ value: yAxisLabel, angle: -90, position: 'left', offset: 0 }}
+          />
+          <Tooltip />
+          <Legend  className='mt-8'/>
+          <DataComponent type="monotone" dataKey={fieldValues.yAxis} stroke="#8884d8" fill="#8884d8" />
+        </ChartComponent>
+      );
+    case 'bar':
+      return (
+        <BarChart {...commonProps}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey={fieldValues.xAxis || 'default'} 
+            label={{ value: xAxisLabel, position: 'bottom', offset: 0 }}
+            tick={false} // Hide X-axis tick labels
+          />
+          <YAxis 
+            label={{ value: yAxisLabel, angle: -90, position: 'left', offset: 0 }}
+          />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey={fieldValues.yAxis} fill="#8884d8" />
+        </BarChart>
+      );
+    case 'pie':
+      return (
+        <PieChart {...commonProps}>
+          <Pie
+            data={chartData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey={fieldValues.value}
+            nameKey={fieldValues.name}
+            label
+          />
+          <Tooltip />
+          <Legend />
+        </PieChart>
+      );
+    default:
+      return null;
+  }
+};
+
+  const userID = localStorage.getItem('user_minex_id');
 
   const availableFilenames = getFilenames();
   const schemaFieldsArray = Object.keys(schemaFields);
@@ -180,11 +204,19 @@ function Dashboard() {
                   <SelectValue placeholder={`Select ${field}`} />
                 </SelectTrigger>
                 <SelectContent>
-                  {schemaFieldsArray.map((schemaField) => (
-                    <SelectItem key={schemaField} value={schemaField}>
-                      {schemaField}
-                    </SelectItem>
-                  ))}
+                  {field === 'xAxis' ? (
+                    xAxisOptions.map((schemaField) => (
+                      <SelectItem key={schemaField} value={schemaField}>
+                        {schemaField}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    yAxisOptions.map((schemaField) => (
+                      <SelectItem key={schemaField} value={schemaField}>
+                        {schemaField}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             ))}

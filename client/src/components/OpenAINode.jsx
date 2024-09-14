@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Handle, Position, useNodesData, useReactFlow } from '@xyflow/react';
 import { memo } from "react";
 
-
-function SQLQueryNode({ id, data, isConnectable }) {
+function OpenAINode({ id, data, isConnectable }) {
   const { setNodes } = useReactFlow();
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,7 +29,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
   // Handle transformation on multiple files
   const handleTransform = async () => {
     if (!query || filePaths.length === 0) {
-      setStatus("Please provide a valid SQL query and connect at least one file.");
+      setStatus("Please provide a valid query and connect at least one file.");
       return;
     }
 
@@ -38,11 +37,11 @@ function SQLQueryNode({ id, data, isConnectable }) {
 
     const payload = {
       input_paths: filePaths,  // Send multiple file paths
-      sql_query: query,
+      openai_query: query,
     };
 
     try {
-      const response = await fetch('http://localhost:5000/run_sql_on_s3_csv', {
+      const response = await fetch('http://localhost:5000/run_openai_on_s3', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,21 +52,21 @@ function SQLQueryNode({ id, data, isConnectable }) {
       const data = await response.json();
       console.log(data);
       if (response.ok && data.output_path) {
-        // Update the node with the new file path from the SQL transformation
+        // Update the node with the new file path from the OpenAI transformation
         setNodes((nds) =>
           nds.map((node) =>
             node.id === id ? { ...node, data: { ...node.data, filePath: data.output_path } } : node
           )
         );
         setError("");
-        setStatus("SQL Query Executed, connect to Load.");
+        setStatus("OpenAI Query Executed, connect to Load.");
       } else {
-        throw new Error("SQL execution failed.");
+        throw new Error("OpenAI execution failed.");
       }
     } catch (error) {
       console.error(error);
       setStatus("");
-      setError("Failed to execute SQL query.");
+      setError("Failed to execute OpenAI query.");
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +91,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
       </button>
       <div className='text-[10px] flex flex-col p-2'>
         <div>
-          <p className="text-[10px] text-center font-bold text-black">Write your SQL Query to Transform.</p>
+          <p className="text-[10px] text-center font-bold text-black">Write your OpenAI Query to Transform.</p>
         </div>
         <label htmlFor="text"></label>
         <textarea
@@ -101,12 +100,12 @@ function SQLQueryNode({ id, data, isConnectable }) {
           type='text'
           onChange={onChange}
           className="nodrag mt-2 text-[8px] p-1"
-          placeholder="SELECT * FROM TABLE;"
+          placeholder="Write OpenAI query..."
         />
         <button
           className="bg-black text-white p-1 w-auto self-center mt-2 text-[10px]"
           onClick={handleTransform}
-          disabled={isLoading || filePaths.length === 0}  // Disable if no files or loading
+        //   disabled={isLoading || filePaths.length === 0}  // Disable if no files or loading
         >
           {isLoading ? 'Transforming...' : 'Transform'}
         </button>
@@ -134,4 +133,4 @@ function SQLQueryNode({ id, data, isConnectable }) {
   );
 }
 
-export default memo(SQLQueryNode);
+export default memo(OpenAINode);

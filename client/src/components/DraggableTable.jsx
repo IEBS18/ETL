@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function DraggableTable({ toggleTablePosition, isTableAtTop }) {
   const [isMinimized, setIsMinimized] = useState(true);
   const [selectedFile, setSelectedFile] = useState("");
-  const [tableData, setTableData] = useState({ columns: [], rows: [], schema: {} }); // Schema is an object
+  const [tableData, setTableData] = useState({ columns: [], rows: [], schema: {} });
   const [activeTab, setActiveTab] = useState("preview");
   const filenames = getFilenames();
 
@@ -121,13 +121,22 @@ export default function DraggableTable({ toggleTablePosition, isTableAtTop }) {
                 Schema for {selectedFile}
               </h3>
               {tableData?.schema && Object.keys(tableData.schema).length > 0 ? (
-                <ul className="list-disc list-inside">
-                  {Object.entries(tableData.schema).map(([key, value], index) => (
-                    <li key={index} className="mb-1">
-                      {key}: {value}
-                    </li>
-                  ))}
-                </ul>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="p-2 border border-gray-200 text-left">Column Name</th>
+                      <th className="p-2 border border-gray-200 text-left">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(tableData.schema).map(([columnName, columnType], index) => (
+                      <tr key={index}>
+                        <td className="p-2 border border-gray-200">{columnName}</td>
+                        <td className="p-2 border border-gray-200">{columnType}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <p>No schema available</p>
               )}
@@ -138,3 +147,5 @@ export default function DraggableTable({ toggleTablePosition, isTableAtTop }) {
     </div>
   );
 }
+
+ 

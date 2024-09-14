@@ -105,6 +105,11 @@
 import { useCallback, useState, memo } from 'react';
 import { Handle, useReactFlow } from '@xyflow/react';
 import '../index.css';
+import { addData } from './data.js';
+import { removeData } from "./data.js";
+import { addVisualize } from "./visualize";
+
+
 
 function LoadNode({ id, data, isConnectable }) {
     const { setNodes } = useReactFlow();

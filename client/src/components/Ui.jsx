@@ -136,8 +136,8 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
     {
       name: "OpenAI",
       icon: <img src={gpt} alt="gpt" className="h-8 w-8" />,
-      type: "SQLQuery",
-      premium: true,
+      type: "OpenAIQuery",
+      premium: false,
     },
     {
       name: "Llama",

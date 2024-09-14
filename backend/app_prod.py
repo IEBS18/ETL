@@ -10,6 +10,7 @@ from io import BytesIO
 from io import StringIO
 import xlsxwriter
 import pandasql as psql
+import requests
 import tempfile
 import uuid
 import json
@@ -245,7 +246,7 @@ def local_extract_sheet_to_s3():
 
             # Get column names, first 5 rows, and schema
             columns = df.columns.tolist()
-            first_five_rows = df.head().to_dict(orient='records')
+            first_five_rows = df.to_dict(orient='records') 
             schema = df.dtypes.astype(str).to_dict()
 
             # Return S3 path, columns, first 5 rows, and schema
@@ -422,6 +423,103 @@ def run_sql_on_s3_csv():
             temp_file_path = temp_file.name
 
         output_key = f'DataAnalysis/Output/{uuid.uuid4()}.csv'
+        with open(temp_file_path, 'rb') as data:
+            s3.upload_fileobj(data, output_bucket, output_key)
+
+        os.remove(temp_file_path)
+
+        output_s3_path = f's3://{output_bucket}/{output_key}'
+        return jsonify({'output_path': output_s3_path}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+@app.route('/run_openai_on_s3', methods=['POST'])
+def run_openai_on_s3():
+    try:
+        s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
+        openai_query = request.json.get('openai_query')
+        output_bucket = 'my-internal-bucket'
+
+        if not s3_file_paths or not openai_query:
+            return jsonify({'error': 'Missing required parameters'}), 400
+
+        s3 = boto3.client(
+            's3',
+            region_name=os.environ["region_name"],
+            aws_access_key_id=os.environ["aws_access_key_id"],
+            aws_secret_access_key=os.environ["aws_secret_access_key"]
+        )
+
+        dataframes = {}
+
+        for s3_file_path in s3_file_paths:
+            bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
+            file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
+            
+            # Prepend a valid identifier prefix
+            valid_table_name = f"table_{file_name}"
+
+            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+            file_data = file_obj['Body'].read()
+
+            # Load CSV or XLSX into pandas DataFrame
+            if key.endswith('.xlsx'):
+                xls = pd.ExcelFile(BytesIO(file_data))
+                df = pd.read_excel(xls, xls.sheet_names[0])
+            else:
+                df = pd.read_csv(StringIO(file_data.decode('utf-8')))
+
+            # Assign DataFrame to the dict with the valid table name
+            dataframes[valid_table_name] = df
+
+        # Print loaded DataFrames to ensure they are correct
+        print(f"Loaded DataFrames: {dataframes.keys()}")
+
+        # Format data to send to OpenAI
+        data_for_openai = []
+        for df_name, df in dataframes.items():
+            data_for_openai.append({
+                'name': df_name,
+                'data': df.to_dict(orient='records')  # Convert the DataFrame to a list of dicts
+            })
+
+        # Prepare OpenAI API request payload
+        openai_payload = {
+            'model': 'gpt-4o-mini',  # Using GPT-4 model, adjust based on your OpenAI API configuration
+            'messages': [
+                {'role': 'system', 'content': 'You are a data transformer. Return data in table only.'},
+                {'role': 'user', 'content': openai_query},
+                {'role': 'user', 'content': f"Data: {data_for_openai}"}
+            ]
+        }
+
+        # Call the OpenAI API
+        openai_api_key = os.environ.get('OPENAI_API_KEY')
+        openai_response = requests.post(
+            'https://api.openai.com/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {openai_api_key}',
+                'Content-Type': 'application/json'
+            },
+            json=openai_payload
+        )
+
+        openai_data = openai_response.json()
+
+        # Handle response from OpenAI and extract the result
+        if openai_response.status_code == 200:
+            openai_result = openai_data['choices'][0]['message']['content']
+            print(openai_result.encode('utf-8'))
+        else:
+            raise Exception(f"OpenAI API failed: {openai_data}")
+
+        # Store the OpenAI result as a file and upload to S3
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(openai_result.encode('utf-8'))
+            temp_file_path = temp_file.name
+
+        output_key = f'DataAnalysis/Output/{uuid.uuid4()}.txt'
         with open(temp_file_path, 'rb') as data:
             s3.upload_fileobj(data, output_bucket, output_key)
 

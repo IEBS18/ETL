@@ -37,3 +37,5 @@ typing-extensions
 greenlet
 sqlalchemy
 flask-sqlalchemy
+requests
+openai

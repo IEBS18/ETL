@@ -128,8 +128,8 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/Group.png";
 
 const topItems = [
-  { icon: Home, href: "/about-us", text: "Home" },
-  { icon: Boxes, href: "/tool", text: "Tools" },
+  { icon: Home, href: "#", text: "Home" },
+  { icon: Boxes, href: "/ETL", text: "Tool" },
   { icon: FileText, href: "/report", text: "Report" },
   { icon: ChartLine, href: "/visualization", text: "Visualize" },
 
