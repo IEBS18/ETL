@@ -10,6 +10,7 @@ from io import BytesIO
 from io import StringIO
 import xlsxwriter
 import pandasql as psql
+import requests
 import tempfile
 import uuid
 import json
@@ -18,6 +19,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # from flask_sqlalchemy import SQLAlchemy
 # from flask_bcrypt import Bcrypt
 # from flask_jwt_extended import JWTManager, create_access_token, jwt_required
+
+from flask_sqlalchemy import SQLAlchemy
 
 load_dotenv()
 app = Flask(__name__)
@@ -45,107 +48,139 @@ def load_users():
         return {}
 
 # Save users to a file
-def save_users(users):
-    with open('users.json', 'w') as f:
-        json.dump(users, f)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('database_url')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+db = SQLAlchemy(app)
+
+# User Model for Authentication
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Text, unique=True, nullable=False)  # UUID for user identification
+    first_name = db.Column(db.Text, nullable=False)
+    last_name = db.Column(db.Text, nullable=False)
+    email = db.Column(db.Text, unique=True, nullable=False)
+    password = db.Column(db.Text, nullable=False)
+    extracted_data = db.relationship('ExtractedData', backref='user', lazy=True)
+
+# ExtractedData Model for storing extracted data associated with a user
+class ExtractedData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    node_id = db.Column(db.String(50), nullable=False)
+    file_name = db.Column(db.String(100), nullable=False)
+    schema = db.Column(db.JSON, nullable=False)  # Store schema as JSON
+    data = db.Column(db.JSON, nullable=False)    # Store extracted data as JSON
+    user_id = db.Column(db.Text, db.ForeignKey('user.user_id'), nullable=False)
+
+# Initialize the database and create the table(s)
+with app.app_context():
+    db.create_all()
+
+# Sign up route
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
-    username = data['email']  # Assuming 'email' is sent from the frontend
+    email = data['email']
     password = data['password']
-    first_name = data['firstName']  # Get firstName from the frontend
-    last_name = data['lastName']    # Get lastName from the frontend
+    first_name = data['firstName']
+    last_name = data['lastName']
 
-    users = load_users()
-
-    if username in users:
+    # Check if user already exists
+    if User.query.filter_by(email=email).first():
         return jsonify({'message': 'User already exists'}), 400
 
-    # Generate a unique user_id
+    # Generate a unique user_id and hash the password
     user_id = str(uuid.uuid4())
-
-    # Hash the password before storing it
     hashed_password = generate_password_hash(password)
 
-    # Store user with user_id, hashed password, firstName, and lastName
-    users[username] = {
-        'user_id': user_id,
-        'first_name': first_name,
-        'last_name': last_name,
-        'password': hashed_password
-    }
-    
-    save_users(users)
+    # Create new user and store in the database
+    new_user = User(user_id=user_id, first_name=first_name, last_name=last_name, email=email, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
 
     return jsonify({'message': 'User created successfully', 'user_minex_id': user_id, 'first_name': first_name}), 201
 
+# Login route
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    username = data['email']
+    email = data['email']
     password = data['password']
 
-    users = load_users()
+    # Retrieve user from the database
+    user = User.query.filter_by(email=email).first()
 
-    if username not in users:
+    if not user:
         return jsonify({'message': 'User does not exist'}), 401
 
-    # Check if the provided password matches the stored hashed password
-    if not check_password_hash(users[username]['password'], password):
+    # Check if the password matches the hashed password in the database
+    if not check_password_hash(user.password, password):
         return jsonify({'message': 'Invalid credentials'}), 401
 
-    # Return the user_id and first_name along with a success message
+    # Return the user_id and first_name on successful login
     return jsonify({
         'message': 'Login successful', 
-        'user_minex_id': users[username]['user_id'], 
-        'first_name': users[username]['first_name']
+        'user_minex_id': user.user_id, 
+        'first_name': user.first_name
     }), 200
- 
 
+# Route to save extracted data to the database
+@app.route('/save-data', methods=['POST'])
+def save_data():
+    data = request.get_json()
+    node_id = data['node_id']
+    file_name = data['file_name']
+    extracted_data = data['extracted_data']
+    schema = data['schema']
+    user_id = data['user_id']
 
-# class User(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     username = db.Column(db.String(150), unique=True, nullable=False)
-#     email = db.Column(db.String(150), unique=True, nullable=False)
-#     password = db.Column(db.String(256), nullable=False)
+    # Store the data in the database
+    new_entry = ExtractedData(node_id=node_id, file_name=file_name, schema=schema, data=extracted_data, user_id=user_id)
+    db.session.add(new_entry)
+    db.session.commit()
 
-#     def __repr__(self):
-#         return f"<User {self.username}>"
-    
-    
-# Create the database tables
-# with app.app_context():
-#     db.create_all()
-    
-    
-    
-# @app.route('/signup', methods=['POST'])
-# def signup():
-#     data = request.get_json()
+    return jsonify({'message': 'Data saved successfully'}), 201
 
-#     if User.query.filter_by(email=data['email']).first():
-#         return jsonify({"message": "Email already registered"}), 400
+# Route to remove extracted data from the database
+@app.route('/remove-data', methods=['DELETE'])
+def remove_data():
+    data = request.get_json()
+    node_id = data['node_id']
+    user_id = data['user_id']
 
-#     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-#     new_user = User(username=data['name'], email=data['email'], password=hashed_password)
+    # Find and remove the data entry from the database
+    entry = ExtractedData.query.filter_by(node_id=node_id, user_id=user_id).first()
+    if entry:
+        db.session.delete(entry)
+        db.session.commit()
+        return jsonify({'message': 'Data removed successfully'}), 200
+    else:
+        return jsonify({'message': 'Data not found'}), 404
 
-#     db.session.add(new_user)
-#     db.session.commit()
+# Route to retrieve all extracted data for a user
+@app.route('/get-data', methods=['GET'])
+def get_data():
+    user_id = request.args.get('user_id')
+    data_entries = ExtractedData.query.filter_by(user_id=user_id).all()
 
-#     return jsonify({"message": "User created successfully"}), 201
+    # Convert the database entries into a dictionary
+    data = {entry.node_id: {
+        'file_name': entry.file_name,
+        'extracted_data': entry.data,
+        'schema': entry.schema
+    } for entry in data_entries}
 
+    return jsonify(data), 200
 
-# @app.route('/login', methods=['POST'])
-# def login():
-#     data = request.get_json()
+# Route to retrieve all filenames for a user
+@app.route('/get-filenames', methods=['GET'])
+def get_filenames():
+    user_id = request.args.get('user_id')
+    data_entries = ExtractedData.query.filter_by(user_id=user_id).all()
 
-#     user = User.query.filter_by(email=data['email']).first()
-#     if user and bcrypt.check_password_hash(user.password, data['password']):
-#         access_token = create_access_token(identity=user.id)
-#         return jsonify(access_token=access_token), 200
-
-#     return jsonify({"message": "Invalid email or password"}), 401
+    filenames = {entry.file_name for entry in data_entries}
+    print(filenames)
+    return jsonify({'filenames': list(filenames)}), 200
 
 
 @app.route('/localextract', methods=['POST'])
@@ -185,123 +220,6 @@ def local_extract():
             'error': 'Unsupported file type. Please upload a .csv, .xlsx, .json, or .xml file.'
         }), 400
 
-# @app.route('/localextractsheet', methods=['POST'])
-# def local_extract_sheet_to_s3():
-#     try:
-#         # Get file and optional sheet name
-#         file = request.files.get('file')
-#         sheet_name = request.form.get('sheetName')  # Optional, for XLSX files
-
-#         if not file:
-#             return jsonify({'error': 'No file provided'}), 400
-
-#         bucket_name = os.environ['bucket_name']
-
-#         # Initialize S3 client
-#         s3 = boto3.client(
-#             's3',
-#             region_name=os.environ['region_name'],
-#             aws_access_key_id=os.environ['aws_access_key_id'],
-#             aws_secret_access_key=os.environ['aws_secret_access_key']
-#         )
-
-#         # Handle XLSX files with sheet selection
-#         if file.filename.endswith('.xlsx') and sheet_name:
-#             try:
-#                 workbook = pd.ExcelFile(file)
-#                 df = pd.read_excel(workbook, sheet_name=sheet_name)
-
-#                 # Convert DataFrame to CSV in memory
-#                 output = BytesIO()
-#                 df.to_csv(output, index=False)
-#                 output.seek(0)
-
-#                 # Upload to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.xlsx', f'_{sheet_name}.csv')}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process XLSX file: {str(e)}"}), 500
-
-#         # Handle CSV files
-#         elif file.filename.endswith('.csv'):
-#             try:
-#                 output = BytesIO()
-#                 file.save(output)
-#                 output.seek(0)
-
-#                 # Save CSV content to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process CSV file: {str(e)}"}), 500
-
-#         # Handle JSON files
-#         elif file.filename.endswith('.json'):
-#             try:
-#                 file_content = file.read().decode('utf-8')
-#                 if file_content.strip().startswith('['):
-#                     data = json.loads(file_content)
-#                 else:
-#                     data = [json.loads(line) for line in file_content.strip().splitlines()]
-
-#                 # Convert JSON to DataFrame
-#                 df = pd.json_normalize(data)
-#                 output = BytesIO()
-#                 df.to_csv(output, index=False)
-#                 output.seek(0)
-
-#                 # Upload to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except json.JSONDecodeError as e:
-#                 return jsonify({'error': f"Invalid JSON format: {str(e)}"}), 400
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process JSON file: {str(e)}"}), 500
-
-#         # Handle XML files
-#         elif file.filename.endswith('.xml'):
-#             try:
-#                 tree = ET.parse(file)
-#                 root = tree.getroot()
-#                 data = [{elem.tag: elem.text for elem in child} for child in root]
-
-#                 # Convert XML data to DataFrame
-#                 df = pd.DataFrame(data)
-#                 output = BytesIO()
-#                 df.to_csv(output, index=False)
-#                 output.seek(0)
-
-#                 # Upload to S3
-#                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.xml', '.csv')}"
-#                 s3.upload_fileobj(output, bucket_name, s3_key)
-#                 s3_url = f"s3://{bucket_name}/{s3_key}"
-
-#                 return jsonify({'s3_path': s3_url}), 200
-
-#             except ET.ParseError as e:
-#                 return jsonify({'error': f"Invalid XML format: {str(e)}"}), 400
-#             except Exception as e:
-#                 return jsonify({'error': f"Failed to process XML file: {str(e)}"}), 500
-
-#         else:
-#             return jsonify({'error': 'Unsupported file type.'}), 400
-
-#     except Exception as e:
-#         # Log the exception and return a JSON error response
-#         return jsonify({'error': f"Unexpected error: {str(e)}"}), 500
-
 @app.route('/localextractsheet', methods=['POST'])
 def local_extract_sheet_to_s3():
     try:
@@ -328,7 +246,7 @@ def local_extract_sheet_to_s3():
 
             # Get column names, first 5 rows, and schema
             columns = df.columns.tolist()
-            first_five_rows = df.head().to_dict(orient='records')
+            first_five_rows = df.to_dict(orient='records') 
             schema = df.dtypes.astype(str).to_dict()
 
             # Return S3 path, columns, first 5 rows, and schema
@@ -516,6 +434,103 @@ def run_sql_on_s3_csv():
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+@app.route('/run_openai_on_s3', methods=['POST'])
+def run_openai_on_s3():
+    try:
+        s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
+        openai_query = request.json.get('openai_query')
+        output_bucket = 'my-internal-bucket'
+
+        if not s3_file_paths or not openai_query:
+            return jsonify({'error': 'Missing required parameters'}), 400
+
+        s3 = boto3.client(
+            's3',
+            region_name=os.environ["region_name"],
+            aws_access_key_id=os.environ["aws_access_key_id"],
+            aws_secret_access_key=os.environ["aws_secret_access_key"]
+        )
+
+        dataframes = {}
+
+        for s3_file_path in s3_file_paths:
+            bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
+            file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
+            
+            # Prepend a valid identifier prefix
+            valid_table_name = f"table_{file_name}"
+
+            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+            file_data = file_obj['Body'].read()
+
+            # Load CSV or XLSX into pandas DataFrame
+            if key.endswith('.xlsx'):
+                xls = pd.ExcelFile(BytesIO(file_data))
+                df = pd.read_excel(xls, xls.sheet_names[0])
+            else:
+                df = pd.read_csv(StringIO(file_data.decode('utf-8')))
+
+            # Assign DataFrame to the dict with the valid table name
+            dataframes[valid_table_name] = df
+
+        # Print loaded DataFrames to ensure they are correct
+        print(f"Loaded DataFrames: {dataframes.keys()}")
+
+        # Format data to send to OpenAI
+        data_for_openai = []
+        for df_name, df in dataframes.items():
+            data_for_openai.append({
+                'name': df_name,
+                'data': df.to_dict(orient='records')  # Convert the DataFrame to a list of dicts
+            })
+
+        # Prepare OpenAI API request payload
+        openai_payload = {
+            'model': 'gpt-4o-mini',  # Using GPT-4 model, adjust based on your OpenAI API configuration
+            'messages': [
+                {'role': 'system', 'content': 'You are a data transformer. Return data in table only.'},
+                {'role': 'user', 'content': openai_query},
+                {'role': 'user', 'content': f"Data: {data_for_openai}"}
+            ]
+        }
+
+        # Call the OpenAI API
+        openai_api_key = os.environ.get('OPENAI_API_KEY')
+        openai_response = requests.post(
+            'https://api.openai.com/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {openai_api_key}',
+                'Content-Type': 'application/json'
+            },
+            json=openai_payload
+        )
+
+        openai_data = openai_response.json()
+
+        # Handle response from OpenAI and extract the result
+        if openai_response.status_code == 200:
+            openai_result = openai_data['choices'][0]['message']['content']
+            print(openai_result.encode('utf-8'))
+        else:
+            raise Exception(f"OpenAI API failed: {openai_data}")
+
+        # Store the OpenAI result as a file and upload to S3
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(openai_result.encode('utf-8'))
+            temp_file_path = temp_file.name
+
+        output_key = f'DataAnalysis/Output/{uuid.uuid4()}.txt'
+        with open(temp_file_path, 'rb') as data:
+            s3.upload_fileobj(data, output_bucket, output_key)
+
+        os.remove(temp_file_path)
+
+        output_s3_path = f's3://{output_bucket}/{output_key}'
+        return jsonify({'output_path': output_s3_path}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 
 @app.route('/downloadfroms3', methods=['POST'])
 def download_from_s3():
@@ -679,7 +694,4 @@ def sql_extract():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
 
