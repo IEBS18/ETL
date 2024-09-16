@@ -80,10 +80,6 @@ function Dashboard() {
   };
 
   const handleCreateChart = () => {
-    if (Object.keys(fieldValues).length !== selectedChart.fields.length) {
-      setError('Please select all required fields');
-      return;
-    }
     setChartData(getVisualize()[selectedFilename]?.rows || null);
     setError('');
   };
@@ -221,7 +217,7 @@ const renderChart = () => {
               </Select>
             ))}
 
-            <Button onClick={handleCreateChart} className="w-full">Create Chart</Button>
+            {/* <Button onClick={handleCreateChart} className="w-full">Create Chart</Button> */}
           </div>
           {error && (
             <Alert variant="destructive" className="mt-4">
