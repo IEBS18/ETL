@@ -163,6 +163,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       name: "View",
       icon: <img src={view} alt="view" className="h-8 w-8" />,
       type: "FileLoad",
+      premium: true,
     },
   ];
 
