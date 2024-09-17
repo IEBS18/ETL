@@ -52,7 +52,7 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       type: "CSVExtract",
     },
     {
-      name: "XLXS",
+      name: "XLSX",
       icon: <img src={xlxs} alt="xlxs" className="h-8 w-8" />,
       type: "XLXSExtract",
     },
