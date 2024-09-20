@@ -134,7 +134,7 @@ function LoadNode({ id, data, isConnectable }) {
         setError(""); // Reset any previous errors
 
         try {
-            const response = await fetch('http://54.234.139.165:5000/downloadfroms3', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/downloadfroms3`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

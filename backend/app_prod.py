@@ -362,10 +362,9 @@ def local_extract_sheet_to_s3():
 @app.route('/run_sql_on_s3_csv', methods=['POST'])
 def run_sql_on_s3_csv():
     try:
-        s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
+        s3_file_paths = request.json.get('input_paths') 
         sql_query = request.json.get('sql_query')
         output_bucket = 'my-internal-bucket'
-
         if not s3_file_paths or not sql_query:
             return jsonify({'error': 'Missing required parameters'}), 400
 
@@ -386,36 +385,36 @@ def run_sql_on_s3_csv():
             file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
             
             # Prepend a valid SQL identifier prefix
-            valid_table_name = f"table_{file_name}"
-
-            file_obj = s3.get_object(Bucket=bucket_name, Key=key)
-            file_data = file_obj['Body'].read()
-
-            # Load CSV or XLSX into pandas DataFrame
             if key.endswith('.xlsx'):
+                file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+                file_data = file_obj['Body'].read()
                 xls = pd.ExcelFile(BytesIO(file_data))
-                df = pd.read_excel(xls, xls.sheet_names[0])
+                for sheet_name in xls.sheet_names:
+                    df = pd.read_excel(xls, sheet_name=sheet_name)
+                    valid_table_name = f"table_{file_name}_{sheet_name}"  # Combine file and sheet name
+                    dataframes[valid_table_name] = df
             else:
+                file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+                file_data = file_obj['Body'].read()
+                valid_table_name = f"table_{file_name}"
                 df = pd.read_csv(StringIO(file_data.decode('utf-8')))
-
-            # Assign DataFrame to the dict with the valid SQL table name
-            dataframes[valid_table_name] = df
+                dataframes[valid_table_name] = df
 
         # Print loaded DataFrames to ensure they are correct
-        print(f"Loaded DataFrames: {dataframes.keys()}")  # This will show you the table names (prefixed with table_)
+        print(f"Loaded DataFrames: {dataframes.keys()}")
 
         # Update locals to include the DataFrames
         locals().update(dataframes)
 
         # Update the SQL query by replacing file names with valid table names
-        for file_name in dataframes.keys():
-            sql_query = sql_query.replace(file_name.lstrip("table_"), file_name)
+        for original_table_name in dataframes.keys():
+            base_name = original_table_name.split('_', 1)[-1]  # Strip "table_" prefix
+            sql_query = sql_query.replace(base_name, original_table_name)
 
         print(f"Modified SQL query: {sql_query}")
 
         # Run the SQL query using pandasql
         query_result = psql.sqldf(sql_query, locals())
-        # print(query_result)
 
         # Generate output and upload to S3
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -476,32 +475,45 @@ def run_openai_on_s3():
         # Print loaded DataFrames to ensure they are correct
         print(f"Loaded DataFrames: {dataframes.keys()}")
 
-        # Format data to send to OpenAI
-        data_for_openai = []
-        for df_name, df in dataframes.items():
-            data_for_openai.append({
-                'name': df_name,
-                'data': df.to_dict(orient='records')  # Convert the DataFrame to a list of dicts
-            })
+        # Prepare OpenAI embedding API request
+        openai_api_key = os.environ.get('OPENAI_API_KEY')
+        headers = {
+            'Authorization': f'Bearer {openai_api_key}',
+            'Content-Type': 'application/json'
+        }
 
-        # Prepare OpenAI API request payload
+        embeddings = {}
+        for df_name, df in dataframes.items():
+            text_data = df.to_csv(index=False)  # Convert the DataFrame into a CSV string
+            response = requests.post(
+                'https://api.openai.com/v1/embeddings',
+                headers=headers,
+                json={
+                    'input': text_data,
+                    'model': 'text-embedding-3-large'  # OpenAI embedding model
+                }
+            )
+            
+            if response.status_code == 200:
+                embedding = response.json()['data'][0]['embedding']
+                embeddings[df_name] = embedding
+            else:
+                raise Exception(f"Failed to generate embeddings for {df_name}: {response.json()}")
+
+        # Send the embeddings to the OpenAI GPT model for processing
         openai_payload = {
             'model': 'gpt-4o-mini',  # Using GPT-4 model, adjust based on your OpenAI API configuration
             'messages': [
                 {'role': 'system', 'content': 'You are a data transformer. Return data in table only.'},
                 {'role': 'user', 'content': openai_query},
-                {'role': 'user', 'content': f"Data: {data_for_openai}"}
+                {'role': 'user', 'content': f"Embeddings: {embeddings}"}
             ]
         }
 
-        # Call the OpenAI API
-        openai_api_key = os.environ.get('OPENAI_API_KEY')
+        # Call the OpenAI API for completion
         openai_response = requests.post(
             'https://api.openai.com/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {openai_api_key}',
-                'Content-Type': 'application/json'
-            },
+            headers=headers,
             json=openai_payload
         )
 

@@ -24,7 +24,7 @@ export default function AwsPopUp({onSave, closePopUp, onSaveForm}) {
     e.preventDefault();
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/awsextract', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/awsextract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

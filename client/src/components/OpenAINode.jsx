@@ -41,7 +41,7 @@ function OpenAINode({ id, data, isConnectable }) {
     };
 
     try {
-      const response = await fetch('http://54.234.139.165:5000/run_openai_on_s3', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/run_openai_on_s3`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
