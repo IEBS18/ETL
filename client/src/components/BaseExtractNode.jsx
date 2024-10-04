@@ -78,7 +78,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
       formData.append("file", file);
 
       try {
-        const response = await fetch("http://54.234.139.165:5000/localextract", {
+        const response = await fetch("http://54.196.201.194:5000/localextract", {
           method: "POST",
           body: formData,
         });
@@ -119,7 +119,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
       }
 
       try {
-        const endpoint = "http://54.234.139.165:5000/localextractsheet";
+        const endpoint = "http://54.196.201.194:5000/localextractsheet";
 
         const response = await fetch(endpoint, {
           method: "POST",

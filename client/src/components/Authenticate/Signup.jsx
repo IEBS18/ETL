@@ -27,7 +27,7 @@ function Signup({ onSwitchToLogin }) {
         setError('');  // Clear error if no issues
         try {
             // Send a POST request to the backend
-            const response = await fetch('http://54.234.139.165:5000/signup', {
+            const response = await fetch('http://54.196.201.194:5000/signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
