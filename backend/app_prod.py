@@ -439,6 +439,7 @@ def run_openai_on_s3():
     try:
         s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
         openai_query = request.json.get('openai_query')
+        user_id = request.cookies.get('user_id')
         output_bucket = 'my-internal-bucket'
 
         if not s3_file_paths or not openai_query:
@@ -458,7 +459,7 @@ def run_openai_on_s3():
             file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
             
             # Prepend a valid identifier prefix
-            valid_table_name = f"table_{file_name}"
+            valid_table_name = f"{file_name}"
 
             file_obj = s3.get_object(Bucket=bucket_name, Key=key)
             file_data = file_obj['Body'].read()
@@ -472,61 +473,79 @@ def run_openai_on_s3():
 
             # Assign DataFrame to the dict with the valid table name
             dataframes[valid_table_name] = df
-
-        # Print loaded DataFrames to ensure they are correct
+            
+            
         print(f"Loaded DataFrames: {dataframes.keys()}")
+        # Create a schema for each DataFrame (table name, columns)
+        schemas = {table_name: df.columns.tolist() for table_name, df in dataframes.items()}
+        locals().update(dataframes)
+        # Create OpenAI embedding request headers
+        openai_api_key = os.environ.get('OPENAI_API_KEY')
+        headers = {
+            'Authorization': f'Bearer {openai_api_key}',
+            'Content-Type': 'application/json'
+        }
 
-        # Format data to send to OpenAI
-        data_for_openai = []
-        for df_name, df in dataframes.items():
-            data_for_openai.append({
-                'name': df_name,
-                'data': df.to_dict(orient='records')  # Convert the DataFrame to a list of dicts
-            })
+        # Prepare prompt including the schema of the data
+        schema_description = "\n".join(
+            [f"Table {name}: {columns}" for name, columns in schemas.items()]
+        )
 
-        # Prepare OpenAI API request payload
+        # Send schema and query to OpenAI
         openai_payload = {
-            'model': 'gpt-4o-mini',  # Using GPT-4 model, adjust based on your OpenAI API configuration
+            'model': 'gpt-4o-mini',  # Adjust model as needed
             'messages': [
-                {'role': 'system', 'content': 'You are a data transformer. Return data in table only.'},
-                {'role': 'user', 'content': openai_query},
-                {'role': 'user', 'content': f"Data: {data_for_openai}"}
+                {'role': 'system', 'content': 'You are an SQL expert skilled in SQLite, never use function "strftime" or any in built function. Only return the raw SQL query as plain text, without code blocks or any formatting.'},
+                {'role': 'user', 'content': f"Schema: {schema_description}"},
+                {'role': 'user', 'content': f"Query: {openai_query}"}
             ]
         }
 
-        # Call the OpenAI API
-        openai_api_key = os.environ.get('OPENAI_API_KEY')
         openai_response = requests.post(
             'https://api.openai.com/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {openai_api_key}',
-                'Content-Type': 'application/json'
-            },
+            headers=headers,
             json=openai_payload
         )
 
         openai_data = openai_response.json()
 
-        # Handle response from OpenAI and extract the result
+        # Handle response from OpenAI and extract the SQL query
         if openai_response.status_code == 200:
-            openai_result = openai_data['choices'][0]['message']['content']
-            print(openai_result.encode('utf-8'))
+            sql_query = openai_data['choices'][0]['message']['content']
+            print(f"Generated SQL Query: {sql_query}")
         else:
             raise Exception(f"OpenAI API failed: {openai_data}")
 
-        # Store the OpenAI result as a file and upload to S3
+        # Execute SQL query on the loaded DataFrames
+        # Using pandasql to run the query against the in-memory DataFrames
+        try:
+            query_result = psql.sqldf(sql_query, locals())
+        except Exception as e:
+            raise Exception(f"SQL execution failed: {str(e)}")
+
+        # Store the SQL query result to a file and upload to S3
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(openai_result.encode('utf-8'))
+            query_result.to_csv(temp_file, index=False)
             temp_file_path = temp_file.name
 
-        output_key = f'DataAnalysis/Output/{uuid.uuid4()}.txt'
+        output_key = f'DataAnalysis/Output/{uuid.uuid4()}/{file_name}.csv'
         with open(temp_file_path, 'rb') as data:
             s3.upload_fileobj(data, output_bucket, output_key)
 
         os.remove(temp_file_path)
 
         output_s3_path = f's3://{output_bucket}/{output_key}'
-        return jsonify({'output_path': output_s3_path}), 200
+        user = User.query.filter_by(user_id=user_id).first()
+        
+        if user:
+            transformed_data = {
+                's3_path': output_s3_path,
+                'query': openai_query
+            }
+            user.transformed_files.append(transformed_data)
+            db.session.commit()
+        print(output_s3_path)
+        return jsonify({'output_path': output_s3_path, 'sql_query': sql_query}), 200
 
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
