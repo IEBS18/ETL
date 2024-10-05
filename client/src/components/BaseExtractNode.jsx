@@ -81,6 +81,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/localextract`, {
           method: "POST",
           body: formData,
+          credentials: 'include'
         });
         const data = await response.json();
 
@@ -124,6 +125,7 @@ function BaseExtractNode({ id, data, isConnectable, type }) {
         const response = await fetch(endpoint, {
           method: "POST",
           body: formData,
+          credentials: 'include'
         });
 
         const contentType = response.headers.get("content-type");

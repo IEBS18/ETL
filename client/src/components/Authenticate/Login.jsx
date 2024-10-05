@@ -27,7 +27,8 @@ function Login({ onSwitchToSignup }) {
                 body: JSON.stringify({
                     email,
                     password
-                })
+                }),
+                credentials: 'include'
             });
 
             const data = await response.json();

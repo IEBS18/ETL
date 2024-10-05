@@ -459,7 +459,6 @@ def run_openai_on_s3():
             
             # Prepend a valid identifier prefix
             valid_table_name = f"table_{file_name}"
-
             file_obj = s3.get_object(Bucket=bucket_name, Key=key)
             file_data = file_obj['Body'].read()
 

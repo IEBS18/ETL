@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, send_file
+import io
+from flask import Flask, request, jsonify, send_file, make_response
 import pandas as pd
 import boto3
 from flask_cors import CORS
@@ -16,11 +17,15 @@ import uuid
 import json
 import xml.etree.ElementTree as ET
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy import JSON
 # from flask_sqlalchemy import SQLAlchemy
 # from flask_bcrypt import Bcrypt
 # from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 
 from flask_sqlalchemy import SQLAlchemy
+
+import re
 
 load_dotenv()
 app = Flask(__name__)
@@ -35,7 +40,7 @@ app = Flask(__name__)
 
 
 
-CORS(app)
+CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
 
 
 USERS_FILE = 'users.json'
@@ -61,7 +66,10 @@ class User(db.Model):
     last_name = db.Column(db.Text, nullable=False)
     email = db.Column(db.Text, unique=True, nullable=False)
     password = db.Column(db.Text, nullable=False)
-    extracted_data = db.relationship('ExtractedData', backref='user', lazy=True)
+    extracted_files = db.Column(MutableList.as_mutable(db.ARRAY(db.Text)), default=list)  # Store extracted files
+    transformed_files = db.Column(MutableList.as_mutable(db.ARRAY(JSON)), default=list)  # Store dicts of file_url and query
+    download_files = db.Column(MutableList.as_mutable(db.ARRAY(db.Text)), default=list)  # Store download file names
+    # extracted_data = db.relationship('ExtractedData', backref='user', lazy=True)
 
 # ExtractedData Model for storing extracted data associated with a user
 class ExtractedData(db.Model):
@@ -77,17 +85,26 @@ with app.app_context():
     db.create_all()
 
 # Sign up route
+from flask import request, jsonify, make_response
+from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
+
+# Signup route
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.get_json()
-    email = data['email']
-    password = data['password']
-    first_name = data['firstName']
-    last_name = data['lastName']
+    email = data.get('email')
+    password = data.get('password')
+    first_name = data.get('firstName')
+    last_name = data.get('lastName')
+
+    # Check if all required fields are provided
+    if not all([email, password, first_name, last_name]):
+        return jsonify({'error': 'All fields are required'}), 400
 
     # Check if user already exists
     if User.query.filter_by(email=email).first():
-        return jsonify({'message': 'User already exists'}), 400
+        return jsonify({'error': 'User already exists'}), 400
 
     # Generate a unique user_id and hash the password
     user_id = str(uuid.uuid4())
@@ -98,31 +115,47 @@ def signup():
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'User created successfully', 'user_minex_id': user_id, 'first_name': first_name}), 201
+    return jsonify({
+        'message': 'User created successfully',
+        'user_minex_id': user_id,
+        'first_name': first_name
+    }), 201
 
 # Login route
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    email = data['email']
-    password = data['password']
+    email = data.get('email')
+    password = data.get('password')
+
+    # Check if all required fields are provided
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
 
     # Retrieve user from the database
     user = User.query.filter_by(email=email).first()
 
     if not user:
-        return jsonify({'message': 'User does not exist'}), 401
+        return jsonify({'error': 'User does not exist'}), 401
 
     # Check if the password matches the hashed password in the database
     if not check_password_hash(user.password, password):
-        return jsonify({'message': 'Invalid credentials'}), 401
+        return jsonify({'error': 'Invalid credentials'}), 401
 
-    # Return the user_id and first_name on successful login
-    return jsonify({
-        'message': 'Login successful', 
-        'user_minex_id': user.user_id, 
+    # Create a response object
+    response = make_response(jsonify({
+        'message': 'Login successful',
+        'user_minex_id': user.user_id,
         'first_name': user.first_name
-    }), 200
+    }))
+    
+    # Set HttpOnly cookie (optional)
+    response.set_cookie('user_id', user.user_id, httponly=True, secure=False, samesite='Lax', max_age=60*60*24*7)
+
+
+  # 7 days expiration
+
+    return response
 
 # Route to save extracted data to the database
 @app.route('/save-data', methods=['POST'])
@@ -220,11 +253,17 @@ def local_extract():
             'error': 'Unsupported file type. Please upload a .csv, .xlsx, .json, or .xml file.'
         }), 400
 
-@app.route('/localextractsheet', methods=['POST'])
+@app.route('/localextractsheet', methods=['POST', 'OPTIONS'])
 def local_extract_sheet_to_s3():
+    if request.method == 'OPTIONS':
+        return '', 204 
     try:
         # Get file and optional sheet name
         file = request.files.get('file')
+        user_id = request.cookies.get('user_id')
+        print(f"Cookies received: {request.cookies}")
+        print(f"Retrieved user_id: {user_id}")
+        print(user_id)
         sheet_name = request.form.get('sheetName')  # Optional, for XLSX files
 
         if not file:
@@ -240,7 +279,7 @@ def local_extract_sheet_to_s3():
             aws_secret_access_key=os.environ['aws_secret_access_key']
         )
 
-        def create_response(df, s3_key):
+        def create_response(df, s3_key, user_id):
             # Replace NaN values with an empty string
             df = df.fillna('')
 
@@ -251,6 +290,12 @@ def local_extract_sheet_to_s3():
 
             # Return S3 path, columns, first 5 rows, and schema
             s3_url = f"s3://{bucket_name}/{s3_key}"
+            user = User.query.filter_by(user_id=user_id).first()
+            print(user)
+            if user:
+                user.extracted_files.append(s3_url)
+                db.session.commit()
+            print(s3_url)
             return jsonify({
                 's3_path': s3_url,
                 'columns': columns,
@@ -273,7 +318,7 @@ def local_extract_sheet_to_s3():
                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.xlsx', f'_{sheet_name}.csv')}"
                 s3.upload_fileobj(output, bucket_name, s3_key)
 
-                return create_response(df, s3_key)
+                return create_response(df, s3_key, user_id)
 
             except Exception as e:
                 return jsonify({'error': f"Failed to process XLSX file: {str(e)}"}), 500
@@ -292,7 +337,7 @@ def local_extract_sheet_to_s3():
                 s3_key = f"DataAnalysis/Input/{file.filename}"
                 s3.upload_fileobj(output, bucket_name, s3_key)
 
-                return create_response(df, s3_key)
+                return create_response(df, s3_key, user_id)
 
             except Exception as e:
                 return jsonify({'error': f"Failed to process CSV file: {str(e)}"}), 500
@@ -318,7 +363,7 @@ def local_extract_sheet_to_s3():
                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.json', '.csv')}"
                 s3.upload_fileobj(output, bucket_name, s3_key)
 
-                return create_response(df, s3_key)
+                return create_response(df, s3_key, user_id)
 
             except json.JSONDecodeError as e:
                 return jsonify({'error': f"Invalid JSON format: {str(e)}"}), 400
@@ -344,7 +389,7 @@ def local_extract_sheet_to_s3():
                 s3_key = f"DataAnalysis/Input/{file.filename.replace('.xml', '.csv')}"
                 s3.upload_fileobj(output, bucket_name, s3_key)
 
-                return create_response(df, s3_key)
+                return create_response(df, s3_key, user_id)
 
             except ET.ParseError as e:
                 return jsonify({'error': f"Invalid XML format: {str(e)}"}), 400
@@ -363,6 +408,9 @@ def local_extract_sheet_to_s3():
 def run_sql_on_s3_csv():
     try:
         s3_file_paths = request.json.get('input_paths') 
+        print(s3_file_paths)
+        user_id = request.cookies.get('user_id')
+        print('user_id: ', user_id)
         sql_query = request.json.get('sql_query')
         output_bucket = 'my-internal-bucket'
         if not s3_file_paths or not sql_query:
@@ -382,7 +430,8 @@ def run_sql_on_s3_csv():
 
         for s3_file_path in s3_file_paths:
             bucket_name, key = s3_file_path.replace('s3://', '').split('/', 1)
-            file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
+            file_name = key.split('/')[-1].split('.')[0]
+            print(file_name)# Extract the file name (without extension)
             
             # Prepend a valid SQL identifier prefix
             if key.endswith('.xlsx'):
@@ -398,6 +447,7 @@ def run_sql_on_s3_csv():
                 file_data = file_obj['Body'].read()
                 valid_table_name = f"table_{file_name}"
                 df = pd.read_csv(StringIO(file_data.decode('utf-8')))
+                print(df)
                 dataframes[valid_table_name] = df
 
         # Print loaded DataFrames to ensure they are correct
@@ -409,25 +459,35 @@ def run_sql_on_s3_csv():
         # Update the SQL query by replacing file names with valid table names
         for original_table_name in dataframes.keys():
             base_name = original_table_name.split('_', 1)[-1]  # Strip "table_" prefix
-            sql_query = sql_query.replace(base_name, original_table_name)
+            modified_sql_query = sql_query.replace(base_name, original_table_name)
 
-        print(f"Modified SQL query: {sql_query}")
+        print(f"Modified SQL query: {modified_sql_query}")
 
         # Run the SQL query using pandasql
-        query_result = psql.sqldf(sql_query, locals())
+        query_result = psql.sqldf(modified_sql_query, locals())
+        print(query_result)
 
         # Generate output and upload to S3
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             query_result.to_csv(temp_file.name, index=False)
             temp_file_path = temp_file.name
 
-        output_key = f'DataAnalysis/Output/{uuid.uuid4()}.csv'
+        output_key = f'DataAnalysis/Output/{uuid.uuid4()}/{file_name}.csv'
         with open(temp_file_path, 'rb') as data:
             s3.upload_fileobj(data, output_bucket, output_key)
 
         os.remove(temp_file_path)
 
         output_s3_path = f's3://{output_bucket}/{output_key}'
+        user = User.query.filter_by(user_id=user_id).first()
+        if user:
+            transformed_data = {
+                's3_path': output_s3_path,
+                'query': sql_query
+            }
+            user.transformed_files.append(transformed_data)
+            db.session.commit()
+        print(output_s3_path)
         return jsonify({'output_path': output_s3_path}), 200
 
     except Exception as e:
@@ -438,6 +498,7 @@ def run_openai_on_s3():
     try:
         s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
         openai_query = request.json.get('openai_query')
+        user_id = request.cookies.get('user_id')
         output_bucket = 'my-internal-bucket'
 
         if not s3_file_paths or not openai_query:
@@ -457,7 +518,7 @@ def run_openai_on_s3():
             file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
             
             # Prepend a valid identifier prefix
-            valid_table_name = f"table_{file_name}"
+            valid_table_name = f"{file_name}"
 
             file_obj = s3.get_object(Bucket=bucket_name, Key=key)
             file_data = file_obj['Body'].read()
@@ -471,46 +532,34 @@ def run_openai_on_s3():
 
             # Assign DataFrame to the dict with the valid table name
             dataframes[valid_table_name] = df
-
-        # Print loaded DataFrames to ensure they are correct
+            
+            
         print(f"Loaded DataFrames: {dataframes.keys()}")
-
-        # Prepare OpenAI embedding API request
+        # Create a schema for each DataFrame (table name, columns)
+        schemas = {table_name: df.columns.tolist() for table_name, df in dataframes.items()}
+        locals().update(dataframes)
+        # Create OpenAI embedding request headers
         openai_api_key = os.environ.get('OPENAI_API_KEY')
         headers = {
             'Authorization': f'Bearer {openai_api_key}',
             'Content-Type': 'application/json'
         }
 
-        embeddings = {}
-        for df_name, df in dataframes.items():
-            text_data = df.to_csv(index=False)  # Convert the DataFrame into a CSV string
-            response = requests.post(
-                'https://api.openai.com/v1/embeddings',
-                headers=headers,
-                json={
-                    'input': text_data,
-                    'model': 'text-embedding-3-large'  # OpenAI embedding model
-                }
-            )
-            
-            if response.status_code == 200:
-                embedding = response.json()['data'][0]['embedding']
-                embeddings[df_name] = embedding
-            else:
-                raise Exception(f"Failed to generate embeddings for {df_name}: {response.json()}")
+        # Prepare prompt including the schema of the data
+        schema_description = "\n".join(
+            [f"Table {name}: {columns}" for name, columns in schemas.items()]
+        )
 
-        # Send the embeddings to the OpenAI GPT model for processing
+        # Send schema and query to OpenAI
         openai_payload = {
-            'model': 'gpt-4o-mini',  # Using GPT-4 model, adjust based on your OpenAI API configuration
+            'model': 'gpt-4o-mini',  # Adjust model as needed
             'messages': [
-                {'role': 'system', 'content': 'You are a data transformer. Return data in table only.'},
-                {'role': 'user', 'content': openai_query},
-                {'role': 'user', 'content': f"Embeddings: {embeddings}"}
+                {'role': 'system', 'content': 'You are an SQL expert skilled in SQLite, never use function "strftime" or any in built function. Only return the raw SQL query as plain text, without code blocks or any formatting.'},
+                {'role': 'user', 'content': f"Schema: {schema_description}"},
+                {'role': 'user', 'content': f"Query: {openai_query}"}
             ]
         }
 
-        # Call the OpenAI API for completion
         openai_response = requests.post(
             'https://api.openai.com/v1/chat/completions',
             headers=headers,
@@ -519,30 +568,304 @@ def run_openai_on_s3():
 
         openai_data = openai_response.json()
 
-        # Handle response from OpenAI and extract the result
+        # Handle response from OpenAI and extract the SQL query
         if openai_response.status_code == 200:
-            openai_result = openai_data['choices'][0]['message']['content']
-            print(openai_result.encode('utf-8'))
+            sql_query = openai_data['choices'][0]['message']['content']
+            print(f"Generated SQL Query: {sql_query}")
         else:
             raise Exception(f"OpenAI API failed: {openai_data}")
 
-        # Store the OpenAI result as a file and upload to S3
+        # Execute SQL query on the loaded DataFrames
+        # Using pandasql to run the query against the in-memory DataFrames
+        try:
+            query_result = psql.sqldf(sql_query, locals())
+        except Exception as e:
+            raise Exception(f"SQL execution failed: {str(e)}")
+
+        # Store the SQL query result to a file and upload to S3
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(openai_result.encode('utf-8'))
+            query_result.to_csv(temp_file, index=False)
             temp_file_path = temp_file.name
 
-        output_key = f'DataAnalysis/Output/{uuid.uuid4()}.txt'
+        output_key = f'DataAnalysis/Output/{uuid.uuid4()}/{file_name}.csv'
         with open(temp_file_path, 'rb') as data:
             s3.upload_fileobj(data, output_bucket, output_key)
 
         os.remove(temp_file_path)
 
         output_s3_path = f's3://{output_bucket}/{output_key}'
-        return jsonify({'output_path': output_s3_path}), 200
+        user = User.query.filter_by(user_id=user_id).first()
+        
+        if user:
+            transformed_data = {
+                's3_path': output_s3_path,
+                'query': openai_query
+            }
+            user.transformed_files.append(transformed_data)
+            db.session.commit()
+        print(output_s3_path)
+        return jsonify({'output_path': output_s3_path, 'sql_query': sql_query}), 200
 
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
+@app.route('/getransformedfiles', methods=['GET'])
+def get_transformed_files():
+    try:
+        user_id = request.cookies.get('user_id')
+        print(user_id)
+        if not user_id:
+            return jsonify({'error': 'User not logged in'}), 401
+
+        user = User.query.filter_by(user_id=user_id).first()
+        print(user)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Extract filenames from extracted_files
+        extracted_files = [file_path for file_path in user.extracted_files]
+
+        # Extract filenames from transformed_files
+        transformed_files = [tf['s3_path'] for tf in user.transformed_files]
+        print(transformed_files)
+
+        # Combine both lists
+        filenames = list(set( transformed_files + extracted_files))  # Remove duplicates
+        print(filenames)
+
+        return jsonify({'filenames': filenames}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+@app.route('/getallfiles', methods=['GET'])
+def get_all_files():
+    try:
+        user_id = request.cookies.get('user_id')
+        print(user_id)
+        if not user_id:
+            return jsonify({'error': 'User not logged in'}), 401
+
+        user = User.query.filter_by(user_id=user_id).first()
+        print(user)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Extract filenames from extracted_files
+        extracted_files = [file_path for file_path in user.extracted_files]
+        
+        extractedfiles= list(set(extracted_files))
+
+        # Extract filenames and SQL queries from transformed_files
+        transformed_files = [
+            {
+                's3_path': tf['s3_path'],
+                'sql_query': tf['query']
+            }
+            for tf in user.transformed_files
+        ]
+        print(transformed_files)
+
+        return jsonify({
+            'extracted_files': (extractedfiles),
+            'transformed_files': transformed_files
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+@app.route('/deletefile', methods=['DELETE'])
+def delete_file():
+    try:
+        # Get user ID from cookies
+        user_id = request.cookies.get('user_id')
+        data = request.get_json()
+        print(data)
+        file_path = request.json.get('filePath')
+        print(file_path)
+        file_type = request.json.get('type')
+        print(file_type)
+        print(user_id)
+        if not user_id:
+            return jsonify({'error': 'User not logged in'}), 401
+
+        # Find the user in the database
+        user = User.query.filter_by(user_id=user_id).first()
+        print(user)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Get file path and type from the request body
+        
+
+        if not file_path or not file_type:
+            return jsonify({'error': 'Invalid data'}), 400
+
+        # Delete from extracted_files or transformed_files based on type
+        if file_type == 'extracted':
+            if file_path in user.extracted_files:
+                user.extracted_files.remove(file_path)
+            else:
+                return jsonify({'error': 'File not found in extracted files'}), 404
+
+        elif file_type == 'transformed':
+            transformed_file = next((f for f in user.transformed_files if f['s3_path'] == file_path), None)
+            if transformed_file:
+                user.transformed_files.remove(transformed_file)
+            else:
+                return jsonify({'error': 'File not found in transformed files'}), 404
+
+        else:
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        return jsonify({'message': 'File deleted successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+import re
+
+@app.route('/create-chart', methods=['POST'])
+def create_chart():
+    user_id = request.cookies.get('user_id')
+    openai_query = request.json.get('prompt')
+    s3_path = request.json.get('filename')
+    print(user_id, openai_query, s3_path)
+
+    output_bucket = 'my-internal-bucket'
+    s3 = boto3.client(
+        's3',
+        region_name=os.environ["region_name"],
+        aws_access_key_id=os.environ["aws_access_key_id"],
+        aws_secret_access_key=os.environ["aws_secret_access_key"]
+    )
+    
+    dataframes = {}
+    bucket_name, key = s3_path.replace('s3://', '').split('/', 1)
+    file_name = key.split('/')[-1].split('.')[0]  # Extract the file name (without extension)
+
+    valid_table_name = f"{file_name}"
+
+    file_obj = s3.get_object(Bucket=bucket_name, Key=key)
+    file_data = file_obj['Body'].read()
+
+    df = pd.read_csv(StringIO(file_data.decode('utf-8')))
+    dataframes[valid_table_name] = df
+
+    print(f"Loaded DataFrames: {dataframes.keys()}")
+    
+    # Create a schema for each DataFrame (table name, columns)
+    schemas = {table_name: df.columns.tolist() for table_name, df in dataframes.items()}
+    locals().update(dataframes)
+
+    schema = df.dtypes.astype(str).to_dict()
+    sample_data = df.head(2).to_dict(orient='records')
+    print(sample_data)
+
+    schema_description = "\n".join(
+        [f"Table {name}: {columns}" for name, columns in schemas.items()]
+    )
+
+    openai_api_key = os.environ.get('OPENAI_API_KEY')
+    headers = {
+        'Authorization': f'Bearer {openai_api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    openai_payload = {
+        'model': 'gpt-4o-mini',
+        'messages': [
+            {'role': 'system', 
+             'content': 'You are an SQL expert skilled in SQLite, never use function "strftime" or any built-in function. Study the format of the provided schema and sample data carefully. Ensure you respect the data types and structure when crafting the query, and never assume the DATES to be in ideal date format; take them as d-m-y only. Only return the raw SQL query to create at least three columns so one can make two line graphs as comparison, as plain text, without any code blocks, comments, or additional text.'},
+            {'role': 'user', 
+             'content': f"Schema: {schema_description}\n\nSample Data: {sample_data}\n"},
+            {'role': 'user', 
+             'content': f"Based on the provided schema and data format, write a query for: {openai_query}"}
+        ]
+    }
+
+    openai_response = requests.post(
+        'https://api.openai.com/v1/chat/completions',
+        headers=headers,
+        json=openai_payload
+    )
+
+    openai_data = openai_response.json()
+
+    # Handle response from OpenAI and extract the SQL query
+    if openai_response.status_code == 200:
+        sql_query = openai_data['choices'][0]['message']['content']
+        print(f"Generated SQL Query: {sql_query}")
+    else:
+        raise Exception(f"OpenAI API failed: {openai_data}")
+
+    # Execute SQL query on the loaded DataFrames
+    try:
+        query_result = psql.sqldf(sql_query, locals())
+        print(query_result)
+    except Exception as e:
+        raise Exception(f"SQL execution failed: {str(e)}")
+
+    columns = query_result.columns.tolist()
+    print(columns)
+    rows = query_result.to_dict(orient='records')
+    print(rows)
+
+    query_result_summary = "\n".join([f"{row}" for row in rows]) if len(rows) < 50 else "\n".join([f"{row}" for row in rows[:50]])  # Sending 50 rows for analysis
+
+    summary_stats = query_result.describe().to_dict()
+    insights_payload = {
+        'model': 'gpt-4o-mini',
+        'messages': [
+            {'role': 'system', 'content': 'You are a data analyst. Analyze the following data and provide very detailed insights in 2000 words and a short summary of the insights. Return your answer strictly in the format, donot use any markdown in summary : insights: , summary: '},
+            {'role': 'user', 'content': f"Summary Statistics: {summary_stats}\nSample Data: {query_result_summary}"}
+        ]
+    }
+    
+    insights_response = requests.post(
+        'https://api.openai.com/v1/chat/completions',
+        headers=headers,
+        json=insights_payload
+    )
+
+    insights_data = insights_response.json()
+
+    if insights_response.status_code == 200:
+        insights = insights_data['choices'][0]['message']['content']
+        print(f"Generated Insights: {insights}")
+
+        # Use regular expressions to extract insights and summary
+        insights_part = ""
+        summary_part = ""
+
+        summary_pattern = r'summary:\s*(.*?)\s*(?=insights:|$)'
+        match = re.search(summary_pattern, insights, re.IGNORECASE)
+
+        if match:
+            insights_part = insights.split(match.group(0))[0].strip()  # Take everything before the match as insights
+            summary_part = match.group(1).strip()  # Extract the matched summary
+        else:
+            insights_part = insights.strip()  # If summary is not present, take the whole content
+
+        # Check for multiple lines in summary
+        if summary_part:
+            summary_part = summary_part.splitlines()[0].strip()  # Only take the first line of the summary if it's multi-line
+
+    else:
+        raise Exception(f"OpenAI API for insights failed: {insights_data}")
+
+    return jsonify({
+        "columns": columns,
+        "rows": rows,
+        "insights": {
+            "insights": insights_part,  # Updated to use insights_part
+            "summary": summary_part      # Updated to use summary_part
+        },
+        "query": sql_query
+    }), 200
+  
+        
 
 @app.route('/downloadfroms3', methods=['POST'])
 def download_from_s3():
@@ -573,6 +896,57 @@ def download_from_s3():
     # Serve file as download
     return send_file(file_like_object, download_name='output', as_attachment=True)
 
+@app.route('/viewdata', methods=['POST'])
+def view_data():
+    s3_path = request.json.get('output_path')
+    print(s3_path)
+    if not s3_path:
+        return jsonify({"error": "No path provided"}), 400
+
+    # Parse S3 path
+    bucket_name, key = s3_path.replace('s3://', '').split('/', 1)
+    print(bucket_name, key)
+
+    # Initialize S3 client
+    s3_client = boto3.client(
+        's3',
+        region_name=os.environ["region_name"],
+        aws_access_key_id=os.environ["aws_access_key_id"],
+        aws_secret_access_key=os.environ["aws_secret_access_key"]
+    )
+
+    try:
+        # Fetch the file from S3
+        s3_response = s3_client.get_object(Bucket=bucket_name, Key=key)
+        file_data = s3_response['Body'].read()
+
+        df = pd.read_csv(StringIO(file_data.decode('utf-8')))
+        print(df)
+        
+        # Get the first 50 rows
+        first_50_rows = df.head(50)
+        
+        df = df.fillna('')
+
+        # Get column names, first 50 rows, and schema
+        columns = df.columns.tolist()
+        first_fifty_rows = df.head(50).to_dict(orient='records')  # Adjust to return 50 rows
+        schema = df.dtypes.astype(str).to_dict()
+        
+        print(first_50_rows.to_dict(orient='records'))
+        
+        # Convert the rows to JSON and return
+        return jsonify({
+                'columns': columns,
+                'first_fifty_rows': first_fifty_rows,
+                'schema': schema
+            }), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+  
 @app.route('/awsextract', methods=['POST'])
 def aws_extract():
 

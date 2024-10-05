@@ -1,6 +1,7 @@
 import React from 'react';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import { Toaster } from "@/components/ui/sonner"
 
 function Layout({ children }) {
   return (
@@ -11,6 +12,7 @@ function Layout({ children }) {
         <div className="flex-1 overflow-auto p-4">
           {children}
         </div>
+        <Toaster />
       </div>
     </div>
   );

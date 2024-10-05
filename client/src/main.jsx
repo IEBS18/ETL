@@ -12,6 +12,7 @@ import Dashboard  from './components/Dashboard.jsx'
 import Layout from './pages/Layout/Layout.jsx'
 import ETL from './pages/ETL.jsx'
 import Authenticate from './pages/Authenticate.jsx'
+import Report from './pages/Report.jsx'
 
 const router = createBrowserRouter([
   {
@@ -49,6 +50,14 @@ const router = createBrowserRouter([
     element: (  
         <Layout>
           <ETL />
+        </Layout>
+
+    )  },
+  {
+    path: '/report',
+    element: (  
+        <Layout>
+          <Report />
         </Layout>
 
     )  },

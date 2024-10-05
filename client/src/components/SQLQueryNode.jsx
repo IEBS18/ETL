@@ -48,6 +48,7 @@ function SQLQueryNode({ id, data, isConnectable }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload), 
+        credentials: 'include'
       });
 
       const data = await response.json();
