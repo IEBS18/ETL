@@ -599,7 +599,7 @@ def run_openai_on_s3():
         if user:
             transformed_data = {
                 's3_path': output_s3_path,
-                'query': openai_query
+                'query': (openai_query, sql_query)
             }
             user.transformed_files.append(transformed_data)
             db.session.commit()
