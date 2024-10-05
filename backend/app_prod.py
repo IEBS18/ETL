@@ -40,7 +40,7 @@ app = Flask(__name__)
 
 
 
-CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
+CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://54.196.201.194:3000/"])
 
 
 USERS_FILE = 'users.json'
