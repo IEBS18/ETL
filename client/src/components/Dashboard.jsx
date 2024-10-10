@@ -40,32 +40,45 @@ function Dashboard() {
     setIsDetailedView((prev) => !prev);
   };
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/getransformedfiles`, { credentials: 'include' })
+    // Fetch all files (both extracted and transformed)
+    fetch(`${import.meta.env.VITE_API_URL}/getallfiles`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
-        if (data && Array.isArray(data.filenames)) {
-          const fileData = data.filenames.map(path => ({
-            fullPath: path,
-            filename: path.split('/').pop(),
-          }));
-          setFilenames(fileData);
-        } else {
-          console.error('Fetched data is not an array:', data);
-          setFilenames([]);
+        if (data.error) {
+          console.error('Error fetching files:', data.error);
+          return;
         }
+
+        const combinedFiles = [
+          ...data.extracted_files.map((filename) => ({
+            fullPath: filename,
+            type: 'extracted',
+          })),
+          ...data.transformed_files.map((file) => ({
+            fullPath: file.s3_path,
+            type: 'transformed',
+            query: file.sql_query,
+          })),
+        ];
+        setFilenames(combinedFiles);
       })
       .catch((error) => {
-        console.error('Error fetching filenames:', error);
+        console.error('Error fetching files:', error);
         setFilenames([]);
       });
   }, []);
 
+  const getFilenameFromPath = (s3Path) => {
+    return s3Path.split('/').pop();  // Get the last part of the S3 path
+  };
+
   const handleCreateChart = () => {
     setisLoading(true);
-    const filePath = filenames.find(file => file.filename === selectedFilename)?.fullPath;
+    const filePath = filenames.find(file => file.fullPath === selectedFilename)?.fullPath;
 
     if (!filePath) {
       console.error('Selected file path not found');
+      setIsLoading(false);
       return;
     }
 
@@ -83,21 +96,21 @@ function Dashboard() {
     })
       .then((res) => res.json())
       .then((data) => {
-
         if (data.rows) {
           setChartData(data.rows);
-          console.log(data.rows);
           setColumns(data.columns);
-          console.log(data.columns);
-          setInsights((data.insights.insights));
+          setInsights(data.insights.insights);
           setSummary(data.insights.summary);
-          setSqlQuery(data.query);// Log the response data
+          setSqlQuery(data.query);
         }
-        console.log(summary);
         setisLoading(false);
       })
-      .catch((error) => console.error('Error creating chart:', error));
+      .catch((error) => {
+        console.error('Error creating chart:', error);
+        setisLoading(false);
+      });
   };
+
 
   const renderChart = () => {
     if (!chartData) return null;
@@ -166,8 +179,11 @@ function Dashboard() {
               <SelectContent>
                 {filenames.length > 0 ? (
                   filenames.map((file) => (
-                    <SelectItem key={file.fullPath} value={file.filename}>
-                      {file.filename}
+                    <SelectItem key={file.fullPath} value={file.fullPath}>
+                      {file.type === 'extracted'
+                        ? `Extracted: (${getFilenameFromPath(file.fullPath)})`
+                        : `Transformed: (${getFilenameFromPath(file.fullPath)}) - Query: ${file.query}`
+                      }
                     </SelectItem>
                   ))
                 ) : (

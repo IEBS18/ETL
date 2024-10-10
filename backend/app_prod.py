@@ -157,6 +157,13 @@ def login():
 
     return response
 
+@app.route('/check_login', methods=['GET'])
+def check_login():
+    user_id = request.cookies.get('user_id')
+    if user_id:
+        return jsonify({'logged_in': True}), 200
+    return jsonify({'logged_in': False}), 401
+
 # Route to save extracted data to the database
 @app.route('/save-data', methods=['POST'])
 def save_data():
@@ -499,6 +506,7 @@ def run_openai_on_s3():
         s3_file_paths = request.json.get('input_paths')  # Expect multiple input paths
         openai_query = request.json.get('openai_query')
         user_id = request.cookies.get('user_id')
+        print(user_id)
         output_bucket = 'my-internal-bucket'
 
         if not s3_file_paths or not openai_query:
@@ -534,7 +542,7 @@ def run_openai_on_s3():
             dataframes[valid_table_name] = df
             
             
-        print(f"Loaded DataFrames: {dataframes.keys()}")
+        # print(f"Loaded DataFrames: {dataframes.keys()}")
         # Create a schema for each DataFrame (table name, columns)
         schemas = {table_name: df.columns.tolist() for table_name, df in dataframes.items()}
         locals().update(dataframes)
@@ -554,11 +562,15 @@ def run_openai_on_s3():
         openai_payload = {
             'model': 'gpt-4o-mini',  # Adjust model as needed
             'messages': [
-                {'role': 'system', 'content': 'You are an SQL expert skilled in SQLite, never use function "strftime" or any in built function. Only return the raw SQL query as plain text, without code blocks or any formatting.'},
+                {
+                    'role': 'system', 
+                    'content': 'You are an SQL expert skilled in SQLite. Always handle column names with spaces by enclosing them in double quotes. Never use the function "strftime" or any built-in function. Only return the raw SQL query as plain text, without code blocks or any formatting.'
+                },
                 {'role': 'user', 'content': f"Schema: {schema_description}"},
                 {'role': 'user', 'content': f"Query: {openai_query}"}
             ]
         }
+
 
         openai_response = requests.post(
             'https://api.openai.com/v1/chat/completions',
@@ -595,14 +607,22 @@ def run_openai_on_s3():
 
         output_s3_path = f's3://{output_bucket}/{output_key}'
         user = User.query.filter_by(user_id=user_id).first()
+        print(user)
         
         if user:
             transformed_data = {
                 's3_path': output_s3_path,
                 'query': (openai_query, sql_query)
             }
+            print(f"Before appending, transformed_files: {user.transformed_files}")
+            
             user.transformed_files.append(transformed_data)
+            
+            # Print transformed_files after appending
+            print(f"After appending, transformed_files: {user.transformed_files}")
+            
             db.session.commit()
+            print(f"Data committed to the database for user_id: {user_id}")
         print(output_s3_path)
         return jsonify({'output_path': output_s3_path, 'sql_query': sql_query}), 200
 
@@ -672,6 +692,7 @@ def get_all_files():
 
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 @app.route('/deletefile', methods=['DELETE'])
 def delete_file():
     try:
@@ -777,7 +798,7 @@ def create_chart():
         'model': 'gpt-4o-mini',
         'messages': [
             {'role': 'system', 
-             'content': 'You are an SQL expert skilled in SQLite, never use function "strftime" or any built-in function. Study the format of the provided schema and sample data carefully. Ensure you respect the data types and structure when crafting the query, and never assume the DATES to be in ideal date format; take them as d-m-y only. Only return the raw SQL query to create at least three columns so one can make two line graphs as comparison, as plain text, without any code blocks, comments, or additional text.'},
+             'content': 'You are an SQL expert skilled in SQLite. Always handle column names with spaces by enclosing them in double quotes. Never use function "strftime" or any built-in function. Study the format of the provided schema and sample data carefully. Ensure you respect the data types and structure when crafting the query, and never assume the DATES to be in ideal date format; take them as d-m-y only. Only return the raw SQL query to create at least three columns so one can make two line graphs as comparison, as plain text, without any code blocks, comments, or additional text.'},
             {'role': 'user', 
              'content': f"Schema: {schema_description}\n\nSample Data: {sample_data}\n"},
             {'role': 'user', 
