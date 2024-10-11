@@ -18,7 +18,8 @@ function Login({ onSwitchToSignup }) {
 
         try {
             // Send a POST request to the backend
-            const response = await fetch('http://54.196.201.194:5000/login', {
+            console.log(import.meta.env.VITE_API_URL)
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -26,7 +27,8 @@ function Login({ onSwitchToSignup }) {
                 body: JSON.stringify({
                     email,
                     password
-                })
+                }),
+                credentials: 'include'
             });
 
             const data = await response.json();

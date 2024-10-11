@@ -42,12 +42,13 @@ function SQLQueryNode({ id, data, isConnectable }) {
     };
 
     try {
-      const response = await fetch('http://54.196.201.194:5000/run_sql_on_s3_csv', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/run_sql_on_s3_csv`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload), 
+        credentials: 'include'
       });
 
       const data = await response.json();

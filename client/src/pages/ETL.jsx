@@ -22,6 +22,7 @@ import LoadNode from '@/components/LoadNode';
 import { CSVExtractNode, JSONExtractNode, XLSXExtractNode, XMLExtractNode } from '@/components/FileType';
 import DraggableTable from '@/components/DraggableTable';
 import OpenAINode from '@/components/OpenAINode';
+import ViewNode from '@/components/ViewNode';
 
 const edgeTypes = {
   custom: CustomEdge,
@@ -36,6 +37,7 @@ const nodeTypes = {
   JSONExtract: JSONExtractNode,
   XMLExtract: XMLExtractNode,
   OpenAIQuery: OpenAINode,
+  ViewNode: ViewNode
 };
 
 let id = 0;
@@ -98,7 +100,7 @@ const DnDFlow = () => {
         );
       }
 
-      if (sourceNode.type === 'SQLQuery' && targetNode.type === 'FileLoad') {
+      if (sourceNode.type === 'SQLQuery' && (targetNode.type === 'FileLoad' || targetNode.type === 'ViewNode')) {
         const { filePath } = sourceNode.data;
         setNodes((nds) =>
           nds.map((node) => {
@@ -115,7 +117,7 @@ const DnDFlow = () => {
           })
         );
       }
-      if (sourceNode.type === 'OpenAIQuery' && targetNode.type === 'FileLoad') {
+      if (sourceNode.type === 'OpenAIQuery' && (targetNode.type === 'FileLoad' || targetNode.type === 'ViewNode')) {
         const { filePath } = sourceNode.data;
         setNodes((nds) =>
           nds.map((node) => {

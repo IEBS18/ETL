@@ -160,6 +160,12 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       type: "FileLoad",
     },
     {
+      name: "View",
+      icon: <img src={view} alt="view" className="h-8 w-8" />,
+      type: "ViewNode",
+      // premium: true,
+    },
+    {
       name: "Amazon S3",
       icon: <img src={awsS3} alt="sql" className="h-8 w-8" />,
       type: "AWSExtractor",
@@ -199,12 +205,6 @@ export default function Component({ nodes, edges, setNodes, setEdges }) {
       name: "MongoDB",
       icon: <img src={mongodb} alt="mongodb" className="h-8 w-8" />,
       type: "LocalExtractor",
-      premium: true,
-    },
-    {
-      name: "View",
-      icon: <img src={view} alt="view" className="h-8 w-8" />,
-      type: "FileLoad",
       premium: true,
     },
   ];

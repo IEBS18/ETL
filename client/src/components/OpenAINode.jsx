@@ -8,6 +8,7 @@ function OpenAINode({ id, data, isConnectable }) {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
+  const [genquery, setGenquery] = useState('');
   const [filePaths, setFilePaths] = useState(data.filePaths || []); // Initial filePaths from the node data
 
   // Collect file paths from data whenever it changes (to handle updates from other connected nodes)
@@ -34,6 +35,7 @@ function OpenAINode({ id, data, isConnectable }) {
     }
 
     setIsLoading(true);  // Set loading state to true
+    setGenquery('');
 
     const payload = {
       input_paths: filePaths,  // Send multiple file paths
@@ -41,12 +43,13 @@ function OpenAINode({ id, data, isConnectable }) {
     };
 
     try {
-      const response = await fetch('http://54.196.201.194:5000/run_openai_on_s3', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/run_openai_on_s3`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload), 
+        body: JSON.stringify(payload),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -59,6 +62,7 @@ function OpenAINode({ id, data, isConnectable }) {
           )
         );
         setError("");
+        setGenquery(data.sql_query);
         setStatus("OpenAI Query Executed, connect to Load.");
       } else {
         throw new Error("OpenAI execution failed.");
@@ -74,12 +78,12 @@ function OpenAINode({ id, data, isConnectable }) {
 
   return (
     <div
-      className={`relative p-1 dndnode ${data.isConnecting ? 'connecting' : ''}`} 
+      className={`relative p-1 dndnode ${data.isConnecting ? 'connecting' : ''}`}
       style={{
-        borderRadius: '5px', 
+        borderRadius: '5px',
         border: `2px solid ${data.isConnecting ? '#7cfc00' : '#1a192b'}`,
-        width: '200px', 
-        height: 'auto', 
+        width: '200px',
+        height: 'auto',
         fontSize: '10px'
       }}
     >
@@ -113,6 +117,13 @@ function OpenAINode({ id, data, isConnectable }) {
           <p className="mt-1 text-[6px] text-center font-bold text-red-500">{error}</p>
         ) : (
           status && <p className="mt-1 text-[6px] text-center font-bold text-green-500">{status}</p>
+        )}
+
+        {!isLoading && genquery && (
+          <div className="mt-2 p-2 bg-gray-100 border rounded text-[8px]">
+            <p className="font-bold">Generated SQL Query:</p>
+            <p>{genquery}</p>
+          </div>
         )}
       </div>
       <Handle
