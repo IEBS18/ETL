@@ -573,7 +573,7 @@ def run_openai_on_s3():
         openai_response = requests.post(
             'https://api.openai.com/v1/chat/completions',
             headers=headers,
-            headers=headers,
+            # headers=headers,
             json=openai_payload
         )
 
